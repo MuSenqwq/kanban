@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.pollix.at/thymeleaf/shiro">
+<head>
+    <th:block th:include="include :: header('任务卡片列表')" />
+</head>
+<body class="gray-bg">
+     <div class="container-div">
+        <div class="row">
+            <div class="col-sm-12 search-collapse">
+                <form id="formId">
+                    <div class="select-list">
+                        <ul>
+                            <li>
+                                <label>归属清单ID：</label>
+                                <input type="text" name="listId"/>
+                            </li>
+                            <li>
+                                <label>归属看板ID(冗余字段查询优化)：</label>
+                                <input type="text" name="boardId"/>
+                            </li>
+                            <li>
+                                <label>任务标题：</label>
+                                <input type="text" name="cardTitle"/>
+                            </li>
+                            <li>
+                                <label>优先级(字典kb_card_priority)：</label>
+                                <input type="text" name="priority"/>
+                            </li>
+                            <li>
+                                <label>截止时间：</label>
+                                <input type="text" class="time-input" placeholder="请选择截止时间" name="deadline"/>
+                            </li>
+                            <li>
+                                <label>卡片排序(拖拽用)：</label>
+                                <input type="text" name="orderNum"/>
+                            </li>
+                            <li>
+                                <a class="btn btn-primary btn-rounded btn-sm" onclick="$.table.search()"><i class="fa fa-search"></i>&nbsp;搜索</a>
+                                <a class="btn btn-warning btn-rounded btn-sm" onclick="$.form.reset()"><i class="fa fa-refresh"></i>&nbsp;重置</a>
+                            </li>
+                        </ul>
+                    </div>
+                </form>
+            </div>
+
+            <div class="btn-group-sm" id="toolbar" role="group">
+                <a class="btn btn-success" onclick="$.operate.add()" shiro:hasPermission="kanban:card:add">
+                    <i class="fa fa-plus"></i> 添加
+                </a>
+                <a class="btn btn-primary single disabled" onclick="$.operate.edit()" shiro:hasPermission="kanban:card:edit">
+                    <i class="fa fa-edit"></i> 修改
+                </a>
+                <a class="btn btn-danger multiple disabled" onclick="$.operate.removeAll()" shiro:hasPermission="kanban:card:remove">
+                    <i class="fa fa-remove"></i> 删除
+                </a>
+                <a class="btn btn-warning" onclick="$.table.exportExcel()" shiro:hasPermission="kanban:card:export">
+                    <i class="fa fa-download"></i> 导出
+                </a>
+            </div>
+            <div class="col-sm-12 select-table table-striped">
+                <table id="bootstrap-table"></table>
+            </div>
+        </div>
+    </div>
+    <th:block th:include="include :: footer" />
+    <script th:inline="javascript">
+        var editFlag = [[${@permission.hasPermi('kanban:card:edit')}]];
+        var removeFlag = [[${@permission.hasPermi('kanban:card:remove')}]];
+        var priorityDatas = [[${@dict.getType('kb_card_priority')}]];
+        var prefix = ctx + "kanban/card";
+
+        $(function() {
+            var options = {
+                url: prefix + "/list",
+                createUrl: prefix + "/add",
+                updateUrl: prefix + "/edit/{id}",
+                removeUrl: prefix + "/remove",
+                exportUrl: prefix + "/export",
+                modalName: "任务卡片",
+                columns: [{
+                    checkbox: true
+                },
+                {
+                    field: 'cardId',
+                    title: '卡片ID',
+                    visible: false
+                },
+                {
+                    field: 'listId',
+                    title: '归属清单ID'
+                },
+                {
+                    field: 'boardId',
+                    title: '归属看板ID(冗余字段查询优化)'
+                },
+                {
+                    field: 'cardTitle',
+                    title: '任务标题'
+                },
+                {
+                    field: 'cardContent',
+                    title: '任务详情'
+                },
+                {
+                    field: 'priority',
+                    title: '优先级(字典kb_card_priority)',
+                    formatter: function(value, row, index) {
+                       return $.table.selectDictLabel(priorityDatas, value);
+                    }
+                },
+                {
+                    field: 'deadline',
+                    title: '截止时间'
+                },
+                {
+                    field: 'orderNum',
+                    title: '卡片排序(拖拽用)'
+                },
+                {
+                    field: 'status',
+                    title: '状态'
+                },
+                {
+                    title: '操作',
+                    align: 'center',
+                    formatter: function(value, row, index) {
+                        var actions = [];
+                        actions.push('<a class="btn btn-success btn-xs ' + editFlag + '" href="javascript:void(0)" onclick="$.operate.edit(\'' + row.cardId + '\')"><i class="fa fa-edit"></i>编辑</a> ');
+                        actions.push('<a class="btn btn-danger btn-xs ' + removeFlag + '" href="javascript:void(0)" onclick="$.operate.remove(\'' + row.cardId + '\')"><i class="fa fa-remove"></i>删除</a>');
+                        return actions.join('');
+                    }
+                }]
+            };
+            $.table.init(options);
+        });
+    </script>
+</body>
+</html>

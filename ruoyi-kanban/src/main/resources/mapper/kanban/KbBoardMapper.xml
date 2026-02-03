@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.kanban.mapper.KbBoardMapper">
+
+    <resultMap type="KbBoard" id="KbBoardResult">
+        <result property="boardId"    column="board_id"    />
+        <result property="userId"    column="user_id"    />
+        <result property="boardName"    column="board_name"    />
+        <result property="intro"    column="intro"    />
+        <result property="themeColor"    column="theme_color"    />
+        <result property="status"    column="status"    />
+        <result property="orderNum"    column="order_num"    />
+        <result property="delFlag"    column="del_flag"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+        <result property="remark"    column="remark"    />
+    </resultMap>
+
+    <sql id="selectKbBoardVo">
+        select board_id, user_id, board_name, intro, theme_color, status, order_num, del_flag, create_by, create_time, update_by, update_time, remark from kb_board
+    </sql>
+
+    <select id="selectKbBoardList" parameterType="KbBoard" resultMap="KbBoardResult">
+        <include refid="selectKbBoardVo"/>
+        <where>
+            <if test="userId != null "> and user_id = #{userId}</if>
+            <if test="boardName != null  and boardName != ''"> and board_name like concat('%', #{boardName}, '%')</if>
+            <if test="intro != null  and intro != ''"> and intro = #{intro}</if>
+            <if test="themeColor != null  and themeColor != ''"> and theme_color = #{themeColor}</if>
+            <if test="status != null  and status != ''"> and status = #{status}</if>
+            <if test="orderNum != null "> and order_num = #{orderNum}</if>
+        </where>
+        order by order_num asc
+    </select>
+
+    <select id="selectKbBoardByBoardId" parameterType="Long" resultMap="KbBoardResult">
+        <include refid="selectKbBoardVo"/>
+        where board_id = #{boardId}
+    </select>
+
+    <insert id="insertKbBoard" parameterType="KbBoard" useGeneratedKeys="true" keyProperty="boardId">
+        insert into kb_board
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">user_id,</if>
+            <if test="boardName != null and boardName != ''">board_name,</if>
+            <if test="intro != null">intro,</if>
+            <if test="themeColor != null">theme_color,</if>
+            <if test="status != null">status,</if>
+            <if test="orderNum != null">order_num,</if>
+            <if test="delFlag != null">del_flag,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+            <if test="remark != null">remark,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">#{userId},</if>
+            <if test="boardName != null and boardName != ''">#{boardName},</if>
+            <if test="intro != null">#{intro},</if>
+            <if test="themeColor != null">#{themeColor},</if>
+            <if test="status != null">#{status},</if>
+            <if test="orderNum != null">#{orderNum},</if>
+            <if test="delFlag != null">#{delFlag},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+            <if test="remark != null">#{remark},</if>
+        </trim>
+    </insert>
+
+    <update id="updateKbBoard" parameterType="KbBoard">
+        update kb_board
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="boardName != null and boardName != ''">board_name = #{boardName},</if>
+            <if test="intro != null">intro = #{intro},</if>
+            <if test="themeColor != null">theme_color = #{themeColor},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="orderNum != null">order_num = #{orderNum},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </trim>
+        where board_id = #{boardId}
+    </update>
+
+    <delete id="deleteKbBoardByBoardId" parameterType="Long">
+        delete from kb_board where board_id = #{boardId}
+    </delete>
+
+    <delete id="deleteKbBoardByBoardIds" parameterType="String">
+        delete from kb_board where board_id in
+        <foreach item="boardId" collection="array" open="(" separator="," close=")">
+            #{boardId}
+        </foreach>
+    </delete>
+
+</mapper>

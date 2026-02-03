@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.kanban.mapper.KbListMapper">
+
+    <resultMap type="KbList" id="KbListResult">
+        <result property="listId"    column="list_id"    />
+        <result property="boardId"    column="board_id"    />
+        <result property="listName"    column="list_name"    />
+        <result property="listStatus"    column="list_status"    />
+        <result property="orderNum"    column="order_num"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectKbListVo">
+        select list_id, board_id, list_name, list_status, order_num, create_by, create_time, update_by, update_time from kb_list
+    </sql>
+
+    <select id="selectKbListList" parameterType="KbList" resultMap="KbListResult">
+        <include refid="selectKbListVo"/>
+        <where>
+            <if test="boardId != null "> and board_id = #{boardId}</if>
+            <if test="listName != null  and listName != ''"> and list_name like concat('%', #{listName}, '%')</if>
+            <if test="listStatus != null  and listStatus != ''"> and list_status = #{listStatus}</if>
+            <if test="orderNum != null "> and order_num = #{orderNum}</if>
+        </where>
+        order by order_num asc
+    </select>
+
+    <select id="selectKbListByListId" parameterType="Long" resultMap="KbListResult">
+        <include refid="selectKbListVo"/>
+        where list_id = #{listId}
+    </select>
+
+    <insert id="insertKbList" parameterType="KbList" useGeneratedKeys="true" keyProperty="listId">
+        insert into kb_list
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="boardId != null">board_id,</if>
+            <if test="listName != null and listName != ''">list_name,</if>
+            <if test="listStatus != null">list_status,</if>
+            <if test="orderNum != null">order_num,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="boardId != null">#{boardId},</if>
+            <if test="listName != null and listName != ''">#{listName},</if>
+            <if test="listStatus != null">#{listStatus},</if>
+            <if test="orderNum != null">#{orderNum},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateKbList" parameterType="KbList">
+        update kb_list
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="boardId != null">board_id = #{boardId},</if>
+            <if test="listName != null and listName != ''">list_name = #{listName},</if>
+            <if test="listStatus != null">list_status = #{listStatus},</if>
+            <if test="orderNum != null">order_num = #{orderNum},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where list_id = #{listId}
+    </update>
+
+    <delete id="deleteKbListByListId" parameterType="Long">
+        delete from kb_list where list_id = #{listId}
+    </delete>
+
+    <delete id="deleteKbListByListIds" parameterType="String">
+        delete from kb_list where list_id in
+        <foreach item="listId" collection="array" open="(" separator="," close=")">
+            #{listId}
+        </foreach>
+    </delete>
+
+</mapper>

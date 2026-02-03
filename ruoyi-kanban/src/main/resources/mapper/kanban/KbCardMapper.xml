@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.kanban.mapper.KbCardMapper">
+
+    <resultMap type="KbCard" id="KbCardResult">
+        <result property="cardId"    column="card_id"    />
+        <result property="listId"    column="list_id"    />
+        <result property="boardId"    column="board_id"    />
+        <result property="cardTitle"    column="card_title"    />
+        <result property="cardContent"    column="card_content"    />
+        <result property="priority"    column="priority"    />
+        <result property="deadline"    column="deadline"    />
+        <result property="orderNum"    column="order_num"    />
+        <result property="status"    column="status"    />
+        <result property="createBy"    column="create_by"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateBy"    column="update_by"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectKbCardVo">
+        select card_id, list_id, board_id, card_title, card_content, priority, deadline, order_num, status, create_by, create_time, update_by, update_time from kb_card
+    </sql>
+
+    <select id="selectKbCardList" parameterType="KbCard" resultMap="KbCardResult">
+        <include refid="selectKbCardVo"/>
+        <where>
+            <if test="listId != null "> and list_id = #{listId}</if>
+            <if test="boardId != null "> and board_id = #{boardId}</if>
+            <if test="cardTitle != null  and cardTitle != ''"> and card_title like concat('%', #{cardTitle}, '%')</if>
+            <if test="priority != null  and priority != ''"> and priority = #{priority}</if>
+            <if test="deadline != null "> and deadline = #{deadline}</if>
+            <if test="orderNum != null "> and order_num = #{orderNum}</if>
+            <if test="status != null  and status != ''"> and status = #{status}</if>
+        </where>
+        order by order_num asc, create_time desc
+    </select>
+
+    <select id="selectKbCardByCardId" parameterType="Long" resultMap="KbCardResult">
+        <include refid="selectKbCardVo"/>
+        where card_id = #{cardId}
+    </select>
+
+    <insert id="insertKbCard" parameterType="KbCard" useGeneratedKeys="true" keyProperty="cardId">
+        insert into kb_card
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="listId != null">list_id,</if>
+            <if test="boardId != null">board_id,</if>
+            <if test="cardTitle != null and cardTitle != ''">card_title,</if>
+            <if test="cardContent != null">card_content,</if>
+            <if test="priority != null">priority,</if>
+            <if test="deadline != null">deadline,</if>
+            <if test="orderNum != null">order_num,</if>
+            <if test="status != null">status,</if>
+            <if test="createBy != null">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="listId != null">#{listId},</if>
+            <if test="boardId != null">#{boardId},</if>
+            <if test="cardTitle != null and cardTitle != ''">#{cardTitle},</if>
+            <if test="cardContent != null">#{cardContent},</if>
+            <if test="priority != null">#{priority},</if>
+            <if test="deadline != null">#{deadline},</if>
+            <if test="orderNum != null">#{orderNum},</if>
+            <if test="status != null">#{status},</if>
+            <if test="createBy != null">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateKbCard" parameterType="KbCard">
+        update kb_card
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="listId != null">list_id = #{listId},</if>
+            <if test="boardId != null">board_id = #{boardId},</if>
+            <if test="cardTitle != null and cardTitle != ''">card_title = #{cardTitle},</if>
+            <if test="cardContent != null">card_content = #{cardContent},</if>
+            <if test="priority != null">priority = #{priority},</if>
+            <if test="deadline != null">deadline = #{deadline},</if>
+            <if test="orderNum != null">order_num = #{orderNum},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </trim>
+        where card_id = #{cardId}
+    </update>
+
+    <delete id="deleteKbCardByCardId" parameterType="Long">
+        delete from kb_card where card_id = #{cardId}
+    </delete>
+
+    <delete id="deleteKbCardByCardIds" parameterType="String">
+        delete from kb_card where card_id in
+        <foreach item="cardId" collection="array" open="(" separator="," close=")">
+            #{cardId}
+        </foreach>
+    </delete>
+
+</mapper>
