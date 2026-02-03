@@ -2,7 +2,7 @@ package com.ruoyi.kanban.service.impl;
 
 import java.util.List;
 import com.ruoyi.common.utils.DateUtils;
-import com.ruoyi.common.utils.ShiroUtils; // [新增] 导入 ShiroUtils
+import com.ruoyi.common.utils.ShiroUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.ruoyi.kanban.mapper.KbBoardMapper;
@@ -40,8 +40,8 @@ public class KbBoardServiceImpl implements IKbBoardService
     @Override
     public List<KbBoard> selectKbBoardList(KbBoard kbBoard)
     {
-        // [新增] 只能查询自己的看板 (可选，为了安全建议加上)
-        // kbBoard.setUserId(ShiroUtils.getUserId());
+        // [修改点] 强制过滤当前登录用户，只能看到自己的看板
+        kbBoard.setUserId(ShiroUtils.getUserId());
         return kbBoardMapper.selectKbBoardList(kbBoard);
     }
 
@@ -53,12 +53,9 @@ public class KbBoardServiceImpl implements IKbBoardService
     @Override
     public int insertKbBoard(KbBoard kbBoard)
     {
-        // [修改核心点] 获取当前登录用户的ID并设置
+        // [修改点] 设置创建人ID、账号、时间
         kbBoard.setUserId(ShiroUtils.getUserId());
-
-        // [建议] 同时设置创建者账号，方便审计
         kbBoard.setCreateBy(ShiroUtils.getLoginName());
-
         kbBoard.setCreateTime(DateUtils.getNowDate());
         return kbBoardMapper.insertKbBoard(kbBoard);
     }
@@ -71,7 +68,7 @@ public class KbBoardServiceImpl implements IKbBoardService
     @Override
     public int updateKbBoard(KbBoard kbBoard)
     {
-        // [建议] 设置更新者和更新时间
+        // [修改点] 设置更新人、时间
         kbBoard.setUpdateBy(ShiroUtils.getLoginName());
         kbBoard.setUpdateTime(DateUtils.getNowDate());
         return kbBoardMapper.updateKbBoard(kbBoard);

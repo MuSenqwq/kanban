@@ -9,8 +9,7 @@ import com.ruoyi.common.core.domain.BaseEntity;
 
 /**
  * 任务卡片对象 kb_card
- * 
- * @author ruoyi
+ * * @author ruoyi
  * @date 2026-02-03
  */
 public class KbCard extends BaseEntity
@@ -53,92 +52,104 @@ public class KbCard extends BaseEntity
     @Excel(name = "状态", readConverterExp = "0=进行中,1=已完成,2=已归档")
     private String status;
 
-    public void setCardId(Long cardId) 
+    /** 任务进度 (0-100) */
+    @Excel(name = "任务进度")
+    private Integer progress;
+
+    public void setProgress(Integer progress) {
+        this.progress = progress;
+    }
+
+    public Integer getProgress() {
+        return progress;
+    }
+
+    public void setCardId(Long cardId)
     {
         this.cardId = cardId;
     }
 
-    public Long getCardId() 
+    public Long getCardId()
     {
         return cardId;
     }
 
-    public void setListId(Long listId) 
+    public void setListId(Long listId)
     {
         this.listId = listId;
     }
 
-    public Long getListId() 
+    public Long getListId()
     {
         return listId;
     }
 
-    public void setBoardId(Long boardId) 
+    public void setBoardId(Long boardId)
     {
         this.boardId = boardId;
     }
 
-    public Long getBoardId() 
+    public Long getBoardId()
     {
         return boardId;
     }
 
-    public void setCardTitle(String cardTitle) 
+    public void setCardTitle(String cardTitle)
     {
         this.cardTitle = cardTitle;
     }
 
-    public String getCardTitle() 
+    public String getCardTitle()
     {
         return cardTitle;
     }
 
-    public void setCardContent(String cardContent) 
+    public void setCardContent(String cardContent)
     {
         this.cardContent = cardContent;
     }
 
-    public String getCardContent() 
+    public String getCardContent()
     {
         return cardContent;
     }
 
-    public void setPriority(String priority) 
+    public void setPriority(String priority)
     {
         this.priority = priority;
     }
 
-    public String getPriority() 
+    public String getPriority()
     {
         return priority;
     }
 
-    public void setDeadline(Date deadline) 
+    public void setDeadline(Date deadline)
     {
         this.deadline = deadline;
     }
 
-    public Date getDeadline() 
+    public Date getDeadline()
     {
         return deadline;
     }
 
-    public void setOrderNum(Long orderNum) 
+    public void setOrderNum(Long orderNum)
     {
         this.orderNum = orderNum;
     }
 
-    public Long getOrderNum() 
+    public Long getOrderNum()
     {
         return orderNum;
     }
 
-    public void setStatus(String status) 
+    public void setStatus(String status)
     {
         this.status = status;
     }
 
-    public String getStatus() 
+    public String getStatus()
     {
         return status;
     }
@@ -146,19 +157,20 @@ public class KbCard extends BaseEntity
     @Override
     public String toString() {
         return new ToStringBuilder(this,ToStringStyle.MULTI_LINE_STYLE)
-            .append("cardId", getCardId())
-            .append("listId", getListId())
-            .append("boardId", getBoardId())
-            .append("cardTitle", getCardTitle())
-            .append("cardContent", getCardContent())
-            .append("priority", getPriority())
-            .append("deadline", getDeadline())
-            .append("orderNum", getOrderNum())
-            .append("status", getStatus())
-            .append("createBy", getCreateBy())
-            .append("createTime", getCreateTime())
-            .append("updateBy", getUpdateBy())
-            .append("updateTime", getUpdateTime())
-            .toString();
+                .append("cardId", getCardId())
+                .append("listId", getListId())
+                .append("boardId", getBoardId())
+                .append("cardTitle", getCardTitle())
+                .append("cardContent", getCardContent())
+                .append("priority", getPriority())
+                .append("deadline", getDeadline())
+                .append("orderNum", getOrderNum())
+                .append("status", getStatus())
+                .append("progress", getProgress())
+                .append("createBy", getCreateBy())
+                .append("createTime", getCreateTime())
+                .append("updateBy", getUpdateBy())
+                .append("updateTime", getUpdateTime())
+                .toString();
     }
 }

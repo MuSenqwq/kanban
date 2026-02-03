@@ -14,6 +14,7 @@
         <result property="deadline"    column="deadline"    />
         <result property="orderNum"    column="order_num"    />
         <result property="status"    column="status"    />
+        <result property="progress"    column="progress"    />
         <result property="createBy"    column="create_by"    />
         <result property="createTime"    column="create_time"    />
         <result property="updateBy"    column="update_by"    />
@@ -21,7 +22,7 @@
     </resultMap>
 
     <sql id="selectKbCardVo">
-        select card_id, list_id, board_id, card_title, card_content, priority, deadline, order_num, status, create_by, create_time, update_by, update_time from kb_card
+        select card_id, list_id, board_id, card_title, card_content, priority, deadline, order_num, status, progress, create_by, create_time, update_by, update_time from kb_card
     </sql>
 
     <select id="selectKbCardList" parameterType="KbCard" resultMap="KbCardResult">
@@ -54,6 +55,7 @@
             <if test="deadline != null">deadline,</if>
             <if test="orderNum != null">order_num,</if>
             <if test="status != null">status,</if>
+            <if test="progress != null">progress,</if>
             <if test="createBy != null">create_by,</if>
             <if test="createTime != null">create_time,</if>
             <if test="updateBy != null">update_by,</if>
@@ -68,6 +70,7 @@
             <if test="deadline != null">#{deadline},</if>
             <if test="orderNum != null">#{orderNum},</if>
             <if test="status != null">#{status},</if>
+            <if test="progress != null">#{progress},</if>
             <if test="createBy != null">#{createBy},</if>
             <if test="createTime != null">#{createTime},</if>
             <if test="updateBy != null">#{updateBy},</if>
@@ -86,6 +89,7 @@
             <if test="deadline != null">deadline = #{deadline},</if>
             <if test="orderNum != null">order_num = #{orderNum},</if>
             <if test="status != null">status = #{status},</if>
+            <if test="progress != null">progress = #{progress},</if>
             <if test="createBy != null">create_by = #{createBy},</if>
             <if test="createTime != null">create_time = #{createTime},</if>
             <if test="updateBy != null">update_by = #{updateBy},</if>

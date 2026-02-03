@@ -1,116 +1,359 @@
 <!DOCTYPE html>
 <html lang="zh" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.pollix.at/thymeleaf/shiro">
 <head>
-    <th:block th:include="include :: header('任务看板列表')" />
-</head>
-<body class="gray-bg">
-<div class="container-div">
-    <div class="row">
-        <div class="col-sm-12 search-collapse">
-            <form id="formId">
-                <div class="select-list">
-                    <ul>
-                        <li>
-                            <label>看板名称：</label>
-                            <input type="text" name="boardName"/>
-                        </li>
-                        <li>
-                            <label>状态：</label>
-                            <select name="status" th:with="type=${@dict.getType('sys_normal_disable')}">
-                                <option value="">所有</option>
-                                <option th:each="dict : ${type}" th:text="${dict.dictLabel}" th:value="${dict.dictValue}"></option>
-                            </select>
-                        </li>
-                        <li>
-                            <a class="btn btn-primary btn-rounded btn-sm" onclick="$.table.search()"><i class="fa fa-search"></i>&nbsp;搜索</a>
-                            <a class="btn btn-warning btn-rounded btn-sm" onclick="$.form.reset()"><i class="fa fa-refresh"></i>&nbsp;重置</a>
-                        </li>
-                    </ul>
-                </div>
-            </form>
-        </div>
+    <th:block th:include="include :: header('任务看板')" />
+    <style>
+        /* 全局重置与字体优化 */
+        body {
+            background-color: #f7f9fc; /* 更清爽的灰蓝背景 */
+            font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
+            color: #172b4d;
+        }
 
-        <div class="btn-group-sm" id="toolbar" role="group">
-            <a class="btn btn-success" onclick="$.operate.add()" shiro:hasPermission="kanban:board:add">
-                <i class="fa fa-plus"></i> 新建看板
-            </a>
-            <a class="btn btn-primary single disabled" onclick="$.operate.edit()" shiro:hasPermission="kanban:board:edit">
-                <i class="fa fa-edit"></i> 修改
-            </a>
-            <a class="btn btn-danger multiple disabled" onclick="$.operate.removeAll()" shiro:hasPermission="kanban:board:remove">
-                <i class="fa fa-remove"></i> 删除
-            </a>
-        </div>
-        <div class="col-sm-12 select-table table-striped">
-            <table id="bootstrap-table"></table>
+        /* 顶部导航栏/工具栏 */
+        .dashboard-header {
+            background: #fff;
+            padding: 15px 30px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #172b4d;
+            display: flex;
+            align-items: center;
+        }
+        .header-title i { margin-right: 10px; color: #0079bf; }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px; /* 元素间距 */
+        }
+
+        /* 搜索框美化 */
+        .modern-search {
+            position: relative;
+        }
+        .modern-search input {
+            border: 1px solid #dfe1e6;
+            background-color: #fafbfc;
+            border-radius: 20px; /* 圆角胶囊状 */
+            padding: 6px 15px 6px 35px;
+            width: 240px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .modern-search input:focus {
+            background-color: #fff;
+            border-color: #4c9aff;
+            box-shadow: 0 0 0 2px rgba(76, 154, 255, 0.2);
+            outline: none;
+            width: 300px; /* 聚焦变宽 */
+        }
+        .modern-search i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #7a869a;
+        }
+
+        /* 按钮美化 */
+        .btn-create {
+            background-color: #0079bf;
+            color: #fff;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 4px;
+            font-weight: 500;
+            transition: background 0.2s;
+            cursor: pointer;
+            text-decoration: none !important;
+        }
+        .btn-create:hover { background-color: #026aa7; color: #fff; }
+        .btn-create i { margin-right: 5px; }
+
+        /* 内容容器 */
+        .dashboard-content {
+            padding: 30px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* 网格布局 */
+        .board-grid {
+            display: flex;
+            flex-wrap: wrap;
+            margin: -12px;
+        }
+
+        .board-item-wrapper {
+            width: 25%; /* 一行四个 */
+            padding: 12px;
+            box-sizing: border-box;
+        }
+
+        /* 响应式 */
+        @media (max-width: 1400px) { .board-item-wrapper { width: 33.33%; } }
+        @media (max-width: 900px)  { .board-item-wrapper { width: 50%; } }
+        @media (max-width: 600px)  { .board-item-wrapper { width: 100%; } }
+
+        /* 卡片设计 */
+        .board-card {
+            background: #fff;
+            border-radius: 8px;
+            height: 140px;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid rgba(223, 225, 230, 0.5);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .board-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+            border-color: transparent;
+        }
+
+        /* 侧边颜色条 */
+        .card-color-strip {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 6px;
+            background-color: #ccc; /* 默认灰，会被JS覆盖 */
+        }
+
+        .card-content {
+            padding: 16px 16px 16px 22px; /* 左侧多留点给颜色条 */
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #172b4d;
+            margin-bottom: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-desc {
+            font-size: 13px;
+            color: #5e6c84;
+            line-height: 1.5;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .card-footer {
+            margin-top: auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #8993a4;
+        }
+
+        /* 右上角更多操作 */
+        .card-actions {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            opacity: 0; /* 默认隐藏，悬浮显示 */
+            transition: opacity 0.2s;
+        }
+        .board-card:hover .card-actions { opacity: 1; }
+
+        .action-icon {
+            color: #6b778c;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        .action-icon:hover {
+            background-color: #ebecf0;
+            color: #172b4d;
+        }
+        .action-icon.delete:hover {
+            color: #bf2600;
+            background-color: #ffebe6;
+        }
+
+        /* 状态标记 */
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 4px;
+        }
+        .status-active { background-color: #36b37e; }
+        .status-closed { background-color: #ff5630; }
+
+    </style>
+</head>
+<body>
+
+<div class="dashboard-header">
+    <div class="header-title">
+        <i class="fa fa-trello"></i> 我的看板
+    </div>
+    <div class="header-actions">
+        <form id="searchForm" onsubmit="return false;">
+            <div class="modern-search">
+                <i class="fa fa-search"></i>
+                <input type="text" name="boardName" placeholder="搜索看板名称..." onkeyup="loadBoardList()">
+                <input type="hidden" name="status" value="">
+            </div>
+        </form>
+
+        <a class="btn-create" onclick="$.operate.add()" shiro:hasPermission="kanban:board:add">
+            <i class="fa fa-plus"></i> 创建看板
+        </a>
+    </div>
+</div>
+
+<div class="dashboard-content">
+    <div class="board-grid" id="boardContainer">
+        <div class="board-item-wrapper" style="width:100%; text-align:center; padding:50px; color:#999;">
+            <i class="fa fa-circle-o-notch fa-spin"></i> 加载中...
         </div>
     </div>
 </div>
+
 <th:block th:include="include :: footer" />
+
 <script th:inline="javascript">
     var editFlag = [[${@permission.hasPermi('kanban:board:edit')}]];
     var removeFlag = [[${@permission.hasPermi('kanban:board:remove')}]];
     var datas = [[${@dict.getType('sys_normal_disable')}]];
-
-    // [修改点] 必须与 Controller 的 RequestMapping 一致
     var prefix = ctx + "kanban/board";
 
     $(function() {
-        var options = {
-            url: prefix + "/list",
-            createUrl: prefix + "/add",
-            updateUrl: prefix + "/edit/{id}",
-            removeUrl: prefix + "/remove",
-            exportUrl: prefix + "/export",
-            modalName: "任务看板",
-            columns: [{
-                checkbox: true
-            },
-                {
-                    field: 'boardId',
-                    title: '看板ID',
-                    visible: false
-                },
-                {
-                    field: 'boardName',
-                    title: '看板名称'
-                },
-                {
-                    field: 'intro',
-                    title: '简介'
-                },
-                {
-                    field: 'status',
-                    title: '状态',
-                    formatter: function(value, row, index) {
-                        return $.table.selectDictLabel(datas, value);
-                    }
-                },
-                {
-                    field: 'createTime',
-                    title: '创建时间'
-                },
-                {
-                    title: '操作',
-                    align: 'center',
-                    formatter: function(value, row, index) {
-                        var actions = [];
-                        // [关键点] 这个按钮是跳转到 Trello 拖拽界面的入口
-                        actions.push('<a class="btn btn-info btn-xs" href="javascript:void(0)" onclick="openKanbanView(\'' + row.boardId + '\', \'' + row.boardName + '\')"><i class="fa fa-columns"></i> 进入看板</a> ');
-
-                        actions.push('<a class="btn btn-success btn-xs ' + editFlag + '" href="javascript:void(0)" onclick="$.operate.edit(\'' + row.boardId + '\')"><i class="fa fa-edit"></i>编辑</a> ');
-                        actions.push('<a class="btn btn-danger btn-xs ' + removeFlag + '" href="javascript:void(0)" onclick="$.operate.remove(\'' + row.boardId + '\')"><i class="fa fa-remove"></i>删除</a>');
-                        return actions.join('');
-                    }
-                }]
-        };
-        $.table.init(options);
+        loadBoardList();
     });
 
-    // 打开看板可视化界面
+    // 加载数据
+    function loadBoardList() {
+        var formData = $("#searchForm").serialize();
+        $.ajax({
+            url: prefix + "/list",
+            type: 'post',
+            data: formData,
+            dataType: "json",
+            success: function(res) {
+                if (res.code === 0) {
+                    renderBoards(res.rows);
+                } else {
+                    $.modal.msgError(res.msg);
+                }
+            }
+        });
+    }
+
+    // 渲染卡片
+    function renderBoards(rows) {
+        var html = [];
+        var $container = $("#boardContainer");
+
+        if (!rows || rows.length === 0) {
+            $container.html('<div style="width:100%; text-align:center; padding:60px; color:#6b778c;">' +
+                '<i class="fa fa-inbox fa-3x"></i><br><br>没有找到相关看板</div>');
+            return;
+        }
+
+        for (var i = 0; i < rows.length; i++) {
+            var row = rows[i];
+            var themeColor = row.themeColor || '#0079bf';
+            var isClosed = row.status === '1'; // 1=关闭
+            var statusClass = isClosed ? 'status-closed' : 'status-active';
+            var statusText = isClosed ? '已关闭' : '进行中';
+
+            html.push('<div class="board-item-wrapper">');
+
+            // 卡片整体点击跳转
+            html.push('  <div class="board-card" onclick="openKanbanView(\'' + row.boardId + '\', \'' + row.boardName + '\')">');
+
+            // 1. 侧边颜色条
+            html.push('    <div class="card-color-strip" style="background-color: ' + themeColor + '"></div>');
+
+            // 2. 右上角操作按钮 (阻止冒泡)
+            html.push('    <div class="card-actions" onclick="event.stopPropagation()">');
+            if (editFlag !== 'hidden') {
+                html.push('      <a class="action-icon" title="设置" onclick="$.operate.edit(\'' + row.boardId + '\')"><i class="fa fa-cog"></i></a>');
+            }
+            if (removeFlag !== 'hidden') {
+                html.push('      <a class="action-icon delete" title="删除" onclick="deleteBoard(\'' + row.boardId + '\')"><i class="fa fa-trash-o"></i></a>');
+            }
+            html.push('    </div>');
+
+            // 3. 内容主体
+            html.push('    <div class="card-content">');
+            html.push('      <div class="board-title" title="' + row.boardName + '">' + row.boardName + '</div>');
+            html.push('      <div class="card-desc">' + (row.intro || '暂无描述...') + '</div>');
+
+            // 4. 底部信息
+            html.push('      <div class="card-footer">');
+            html.push('        <span><i class="status-dot ' + statusClass + '"></i>' + statusText + '</span>');
+            // 显示创建时间 (截取日期部分)
+            var dateStr = row.createTime ? row.createTime.substring(0, 10) : '';
+            html.push('        <span>' + dateStr + '</span>');
+            html.push('      </div>'); // end footer
+
+            html.push('    </div>'); // end card-content
+            html.push('  </div>'); // end board-card
+            html.push('</div>'); // end wrapper
+        }
+
+        $container.html(html.join(''));
+    }
+
+    // 跳转详情
     function openKanbanView(boardId, boardName) {
         var url = ctx + 'kanban/view/' + boardId;
-        createMenuItem(url, boardName + '-看板');
+        createMenuItem(url, boardName);
+    }
+
+    // 删除
+    function deleteBoard(id) {
+        $.modal.confirm("确定要删除该看板吗？", function() {
+            $.operate.post(prefix + "/remove", { "ids": id }, function(result) {
+                if (result.code == web_status.SUCCESS) {
+                    $.modal.msgSuccess("删除成功");
+                    loadBoardList(); // 重新加载
+                } else {
+                    $.modal.alertError(result.msg);
+                }
+            });
+        });
+    }
+
+    // 供子窗口调用的刷新
+    window.refreshGrid = function() {
+        loadBoardList();
+    }
+    // 兼容 RuoYi 默认回调
+    function search() {
+        loadBoardList();
     }
 </script>
 </body>

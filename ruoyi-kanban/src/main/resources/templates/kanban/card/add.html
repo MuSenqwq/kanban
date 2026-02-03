@@ -4,6 +4,24 @@
     <th:block th:include="include :: header('新增任务卡片')" />
     <th:block th:include="include :: datetimepicker-css" />
     <th:block th:include="include :: summernote-css" />
+    <style>
+        /* 简单的滑块样式优化 */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            margin: 5px 0;
+        }
+        input[type=range]:focus { outline: none; }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 6px; cursor: pointer;
+            background: #e9ecef; border-radius: 3px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 16px; width: 16px; border-radius: 50%;
+            background: #0079bf; cursor: pointer;
+            -webkit-appearance: none; margin-top: -5px;
+        }
+    </style>
 </head>
 <body class="white-bg">
 <div class="wrapper wrapper-content animated fadeInRight ibox-content">
@@ -28,6 +46,21 @@
                     <select name="priority" class="form-control" th:with="type=${@dict.getType('kb_card_priority')}">
                         <option th:each="dict : ${type}" th:text="${dict.dictLabel}" th:value="${dict.dictValue}" th:selected="${dict.isDefault == 'Y'}"></option>
                     </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xs-12">
+            <div class="form-group">
+                <label class="col-sm-3 control-label">任务进度：</label>
+                <div class="col-sm-8">
+                    <div style="display: flex; align-items: center;">
+                        <input name="progress" type="range" min="0" max="100" value="0" step="5"
+                               style="flex-grow: 1; margin-right: 15px;"
+                               oninput="$('#prog-label').text(this.value + '%')">
+
+                        <span id="prog-label" class="badge badge-primary" style="min-width: 45px; font-size: 13px;">0%</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -82,14 +115,13 @@
     $(function() {
         $('.summernote').summernote({
             lang: 'zh-CN',
-            height: 150, // 设置固定高度，体验更好
+            height: 150,
             dialogsInBody: true,
             callbacks: {
                 onChange: function(contents, $edittable) {
                     $("input[name='" + this.id + "']").val(contents);
                 },
                 onImageUpload: function(files) {
-                    // 图片上传逻辑保持不变...
                     var obj = this;
                     var data = new FormData();
                     data.append("file", files[0]);
