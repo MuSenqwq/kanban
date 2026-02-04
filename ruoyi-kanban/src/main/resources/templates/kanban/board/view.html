@@ -300,13 +300,12 @@
     });
   }
 
-  // 基础操作
   function openAddCard(el) {
     var listId = el.getAttribute('data-list-id');
-    $.modal.open("添加卡片", cardPrefix + "/add?listId=" + listId + "&boardId=" + currentBoardId, 800, 600, function(){ location.reload(); });
+    $.modal.open("添加卡片", cardPrefix + "/add?listId=" + listId + "&boardId=" + currentBoardId, 800, 600);
   }
   function editCard(id) {
-    $.modal.open("修改卡片", cardPrefix + "/edit/" + id, 800, 600, function(){ location.reload(); });
+    $.modal.open("修改卡片", cardPrefix + "/edit/" + id, 800, 600);
   }
   function addList() {
     layer.prompt({title: '列表名称'}, function(val, index){
