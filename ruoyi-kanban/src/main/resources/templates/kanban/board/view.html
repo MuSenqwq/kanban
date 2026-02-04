@@ -224,7 +224,16 @@
   var listPrefix = ctx + "ruoyi-kanban/list";
   var currentBoardId = [[${boardId}]];
 
-  $(function() { initDrag(); });
+  $(function() {
+    initDrag();
+  });
+
+  // [必须保留] 供子窗口调用的刷新方法
+  window.refreshBoard = function() {
+    window.location.reload();
+  }
+  // 兼容别名，防止其他地方调用报错
+  window.refreshTable = window.refreshBoard;
 
   function initDrag() {
     var containers = document.querySelectorAll('.sortable-area');
@@ -234,20 +243,38 @@
         onEnd: function (evt) {
           var itemEl = evt.item;
           var toList = evt.to;
+          var fromList = evt.from;
           var cardId = itemEl.getAttribute('data-card-id');
           var toListId = toList.getAttribute('data-list-id');
           var newOrderIds = Array.from(toList.children).map(function(card) { return card.getAttribute('data-card-id'); }).join(',');
 
+          updateListCount(toList);
+          if (toList !== fromList) updateListCount(fromList);
+
           $.ajax({
             url: cardPrefix + "/changeOrder", type: "post", dataType: "json",
-            data: { "cardId": cardId, "listId": toListId, "sortOrder": newOrderIds }
+            data: { "cardId": cardId, "listId": toListId, "sortOrder": newOrderIds },
+            success: function(res) {
+              if (res.code !== 0) {
+                $.modal.msgError(res.msg);
+                refreshBoard();
+              }
+            }
           })
         }
       });
     });
   }
 
-  // 纯前端筛选
+  function updateListCount(container) {
+    var count = container.children.length;
+    var header = container.previousElementSibling;
+    if (header) {
+      var countSpan = header.querySelector('.list-count');
+      if (countSpan) countSpan.innerText = count;
+    }
+  }
+
   function filterCards() {
     var filter = $("#filterInput").val().toLowerCase();
     $(".kanban-card").each(function() {
@@ -256,7 +283,6 @@
     });
   }
 
-  // 打开数据分析
   function openStats() {
     layer.open({
       type: 1, title: '看板数据驾驶舱', area: ['900px', '550px'], content: $('#statsModal'),
@@ -274,7 +300,6 @@
     var rate = data.total > 0 ? Math.round((data.done/data.total)*100) : 0;
     $("#s-rate").text(rate + "%");
 
-    // 饼图：任务分布
     var pieData = [];
     for(var i=0; i<data.listNames.length; i++) pieData.push({value: data.listCounts[i], name: data.listNames[i]});
 
@@ -285,7 +310,6 @@
       series: [{ type: 'pie', radius: ['40%', '70%'], data: pieData }]
     });
 
-    // 柱状图：优先级
     var bar = echarts.init(document.getElementById('barChart'));
     var pMap = data.priorityStats;
     bar.setOption({
@@ -310,12 +334,12 @@
   function addList() {
     layer.prompt({title: '列表名称'}, function(val, index){
       layer.close(index);
-      $.operate.save(listPrefix + "/add", {boardId: currentBoardId, listName: val, orderNum: 99}, function(){ location.reload(); });
+      $.operate.save(listPrefix + "/add", {boardId: currentBoardId, listName: val, orderNum: 99}, function(){ refreshBoard(); });
     });
   }
   function deleteList(id) {
     $.modal.confirm("确定删除该列表吗？", function() {
-      $.operate.post(listPrefix + "/remove", {ids: id}, function(res){ if(res.code==0) location.reload(); });
+      $.operate.post(listPrefix + "/remove", {ids: id}, function(res){ if(res.code==0) refreshBoard(); });
     });
   }
   function refreshBoard() { location.reload(); }

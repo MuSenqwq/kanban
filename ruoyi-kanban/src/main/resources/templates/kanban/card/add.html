@@ -5,7 +5,6 @@
     <th:block th:include="include :: datetimepicker-css" />
     <th:block th:include="include :: summernote-css" />
     <style>
-        /* 简单的滑块样式优化 */
         input[type=range] {
             -webkit-appearance: none;
             width: 100%;
@@ -102,7 +101,43 @@
 
     function submitHandler() {
         if ($.validate.form()) {
-            $.operate.save(prefix + "/add", $('#form-card-add').serialize());
+            $.operate.save(prefix + "/add", $('#form-card-add').serialize(), function(result) {
+                if (result.code === web_status.SUCCESS) {
+                    $.modal.msgSuccess(result.msg);
+
+                    // [关键修复] 智能查找看板页面并刷新，绝不刷新主框架
+                    var targetWindow = null;
+
+                    // 1. 尝试获取可见的iframe (通常是当前激活的Tab)
+                    var activeFrame = parent.$("iframe:visible")[0];
+                    if (activeFrame && activeFrame.contentWindow.refreshBoard) {
+                        targetWindow = activeFrame.contentWindow;
+                    }
+
+                    // 2. 如果没找到，遍历所有iframe寻找包含 refreshBoard 方法的那个
+                    if (!targetWindow) {
+                        $(parent.document).find("iframe").each(function() {
+                            try {
+                                if (this.contentWindow.refreshBoard) {
+                                    targetWindow = this.contentWindow;
+                                    return false; // break loop
+                                }
+                            } catch(e) {}
+                        });
+                    }
+
+                    // 3. 执行刷新
+                    if (targetWindow) {
+                        targetWindow.refreshBoard();
+                    } else {
+                        console.warn("未找到看板页面，无法自动刷新，请手动刷新。");
+                    }
+
+                    $.modal.close();
+                } else {
+                    $.modal.alertError(result.msg);
+                }
+            });
         }
     }
 

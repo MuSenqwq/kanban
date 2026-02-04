@@ -123,7 +123,35 @@
 
     function submitHandler() {
         if ($.validate.form()) {
-            $.operate.save(prefix + "/edit", $('#form-card-edit').serialize());
+            $.operate.save(prefix + "/edit", $('#form-card-edit').serialize(), function(result) {
+                if (result.code === web_status.SUCCESS) {
+                    $.modal.msgSuccess(result.msg);
+
+                    // [关键修复]
+                    var targetWindow = null;
+                    var activeFrame = parent.$("iframe:visible")[0];
+                    if (activeFrame && activeFrame.contentWindow.refreshBoard) {
+                        targetWindow = activeFrame.contentWindow;
+                    }
+                    if (!targetWindow) {
+                        $(parent.document).find("iframe").each(function() {
+                            try {
+                                if (this.contentWindow.refreshBoard) {
+                                    targetWindow = this.contentWindow;
+                                    return false;
+                                }
+                            } catch(e) {}
+                        });
+                    }
+
+                    if (targetWindow) {
+                        targetWindow.refreshBoard();
+                    }
+                    $.modal.close();
+                } else {
+                    $.modal.alertError(result.msg);
+                }
+            });
         }
     }
 
