@@ -1,7 +1,10 @@
 package com.ruoyi.kanban.controller;
 
 import java.util.List;
+
+import org.apache.shiro.authz.annotation.Logical;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.apache.shiro.authz.annotation.RequiresRoles;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -34,7 +37,7 @@ public class KbCardController extends BaseController
     @Autowired
     private IKbCardService kbCardService;
 
-    @RequiresPermissions("kanban:card:view")
+    @RequiresRoles(value = {"admin", "common"}, logical = Logical.OR)
     @GetMapping()
     public String card()
     {
@@ -44,7 +47,7 @@ public class KbCardController extends BaseController
     /**
      * 查询任务卡片列表
      */
-    @RequiresPermissions("kanban:card:list")
+    @RequiresRoles(value = {"admin", "common"}, logical = Logical.OR)
     @PostMapping("/list")
     @ResponseBody
     public TableDataInfo list(KbCard kbCard)
@@ -117,6 +120,7 @@ public class KbCardController extends BaseController
     /**
      * 删除任务卡片
      */
+    @RequiresRoles("admin")
     @RequiresPermissions("kanban:card:remove")
     @Log(title = "任务卡片", businessType = BusinessType.DELETE)
     @PostMapping( "/remove")
@@ -125,7 +129,6 @@ public class KbCardController extends BaseController
     {
         return toAjax(kbCardService.deleteKbCardByCardIds(ids));
     }
-
 
     @RequiresPermissions("kanban:card:edit")
     @Log(title = "任务卡片", businessType = BusinessType.UPDATE)

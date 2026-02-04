@@ -1,7 +1,10 @@
 package com.ruoyi.kanban.controller;
 
 import java.util.List;
+
+import org.apache.shiro.authz.annotation.Logical;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.apache.shiro.authz.annotation.RequiresRoles;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -26,6 +29,7 @@ import com.ruoyi.common.core.page.TableDataInfo;
  */
 @Controller
 @RequestMapping("/kanban/board") // [修改点] 统一去掉 ruoyi- 前缀，保持简洁
+
 public class KbBoardController extends BaseController
 {
     private String prefix = "kanban/board"; // [修改点] 对应 templates/kanban/board 目录
@@ -33,7 +37,7 @@ public class KbBoardController extends BaseController
     @Autowired
     private IKbBoardService kbBoardService;
 
-    @RequiresPermissions("kanban:board:view") // [修改点] 权限字符建议也统一
+    @RequiresRoles(value = {"admin", "common"}, logical = Logical.OR)
     @GetMapping()
     public String board()
     {
@@ -43,7 +47,8 @@ public class KbBoardController extends BaseController
     /**
      * 查询任务看板列表
      */
-    @RequiresPermissions("kanban:board:list")
+
+    @RequiresRoles(value = {"admin", "common"}, logical = Logical.OR)
     @PostMapping("/list")
     @ResponseBody
     public TableDataInfo list(KbBoard kbBoard)

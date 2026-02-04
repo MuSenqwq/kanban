@@ -1,7 +1,10 @@
 package com.ruoyi.kanban.controller;
 
 import java.util.List;
+
+import org.apache.shiro.authz.annotation.Logical;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.apache.shiro.authz.annotation.RequiresRoles;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -34,7 +37,7 @@ public class KbListController extends BaseController
     @Autowired
     private IKbListService kbListService;
 
-    @RequiresPermissions("ruoyi-kanban:list:view")
+    @RequiresRoles(value = {"admin", "common"}, logical = Logical.OR)
     @GetMapping()
     public String list()
     {
@@ -44,9 +47,9 @@ public class KbListController extends BaseController
     /**
      * 查询看板任务列列表
      */
-    @RequiresPermissions("ruoyi-kanban:list:list")
     @PostMapping("/list")
     @ResponseBody
+    @RequiresRoles(value = {"admin", "common"}, logical = Logical.OR)
     public TableDataInfo list(KbList kbList)
     {
         startPage();

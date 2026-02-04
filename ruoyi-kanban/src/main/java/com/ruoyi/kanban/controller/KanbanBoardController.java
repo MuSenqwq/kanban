@@ -8,6 +8,9 @@ import com.ruoyi.kanban.domain.KbList;
 import com.ruoyi.kanban.service.IKbBoardService;
 import com.ruoyi.kanban.service.IKbCardService;
 import com.ruoyi.kanban.service.IKbListService;
+import org.apache.shiro.authz.annotation.Logical;
+import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.apache.shiro.authz.annotation.RequiresRoles;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -41,6 +44,7 @@ public class KanbanBoardController extends BaseController {
     /**
      * 打开看板可视化页面
      */
+    @RequiresRoles(value = {"admin", "common"}, logical = Logical.OR)
     @GetMapping("/{boardId}")
     public String index(@PathVariable("boardId") Long boardId, ModelMap mmap) {
         // 1. 查询看板详情
