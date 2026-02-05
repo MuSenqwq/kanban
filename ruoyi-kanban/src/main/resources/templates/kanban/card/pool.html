@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.pollix.at/thymeleaf/shiro">
+<head>
+    <th:block th:include="include :: header('任务池')" />
+</head>
+<body class="gray-bg">
+<div class="container-div">
+    <div class="row">
+        <div class="col-sm-12 search-collapse">
+            <form id="formId">
+                <div class="select-list">
+                    <ul>
+                        <li>
+                            任务标题：<input type="text" name="cardTitle"/>
+                        </li>
+                        <li>
+                            <a class="btn btn-primary btn-rounded btn-sm" onclick="$.table.search()"><i class="fa fa-search"></i>&nbsp;搜索</a>
+                            <a class="btn btn-warning btn-rounded btn-sm" onclick="$.form.reset()"><i class="fa fa-refresh"></i>&nbsp;重置</a>
+                        </li>
+                    </ul>
+                </div>
+            </form>
+        </div>
+
+        <div class="btn-group-sm" id="toolbar" role="group">
+            <a class="btn btn-success" onclick="$.operate.add()">
+                <i class="fa fa-plus"></i> 新建任务
+            </a>
+        </div>
+
+        <div class="col-sm-12 select-table table-striped">
+            <div class="alert alert-info">
+                <i class="fa fa-info-circle"></i> 任务池：这里显示所有看板中未分配执行人的任务。您可以在此新建任务供团队认领，或认领现有任务。
+            </div>
+            <table id="bootstrap-table"></table>
+        </div>
+    </div>
+</div>
+<th:block th:include="include :: footer" />
+<script th:inline="javascript">
+    var prefix = ctx + "kanban/card";
+
+    $(function() {
+        var options = {
+            url: prefix + "/pool/list",
+            createUrl: prefix + "/add", // 点击新增按钮时调用的地址
+            modalName: "任务",
+            toolbar: 'toolbar',         // 绑定工具栏
+            showSearch: false,
+            showRefresh: true,
+            showToggle: false,
+            showColumns: false,
+            columns: [
+                { checkbox: true },
+                { field: 'cardId', title: 'ID', visible: false },
+                { field: 'cardTitle', title: '任务标题' },
+                { field: 'priority', title: '优先级', align: 'center', formatter: function(value) {
+                        if (value == '0') return '<span class="badge badge-danger">紧急</span>';
+                        if (value == '1') return '<span class="badge badge-warning">高</span>';
+                        return '<span class="badge badge-info">普通</span>';
+                    }},
+                { field: 'createTime', title: '创建时间' },
+                { field: 'deadline', title: '截止时间', formatter: function(value) {
+                        return value ? value.substring(0, 10) : '-';
+                    }},
+                { title: '操作', align: 'center', formatter: function(value, row, index) {
+                        return '<a class="btn btn-success btn-xs" href="javascript:void(0)" onclick="claimTask(\'' + row.cardId + '\')"><i class="fa fa-hand-paper-o"></i> 认领</a>';
+                    }}
+            ]
+        };
+        $.table.init(options);
+    });
+
+    function claimTask(cardId) {
+        $.modal.confirm("确定要认领这个任务吗？", function() {
+            $.operate.post(prefix + "/claim", { "cardId": cardId }, function(res){
+                if(res.code == 0) {
+                    $.modal.msgSuccess("认领成功！请在【我的任务】中查看");
+                    $.table.refresh();
+                } else {
+                    $.modal.msgError(res.msg);
+                }
+            });
+        });
+    }
+</script>
+</body>
+</html>
