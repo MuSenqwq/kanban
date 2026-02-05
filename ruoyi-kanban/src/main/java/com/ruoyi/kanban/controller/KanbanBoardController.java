@@ -44,7 +44,7 @@ public class KanbanBoardController extends BaseController {
     /**
      * 打开看板可视化页面
      */
-    @RequiresRoles(value = {"admin", "common"}, logical = Logical.OR)
+
     @GetMapping("/{boardId}")
     public String index(@PathVariable("boardId") Long boardId, ModelMap mmap) {
         // 1. 查询看板详情

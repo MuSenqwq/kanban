@@ -60,7 +60,7 @@ public class KbListController extends BaseController
     /**
      * 导出看板任务列列表
      */
-    @RequiresPermissions("ruoyi-kanban:list:export")
+    @RequiresRoles(value = {"admin", "common"}, logical = Logical.OR)
     @Log(title = "看板任务列", businessType = BusinessType.EXPORT)
     @PostMapping("/export")
     @ResponseBody
@@ -74,7 +74,7 @@ public class KbListController extends BaseController
     /**
      * 新增看板任务列
      */
-    @RequiresPermissions("ruoyi-kanban:list:add")
+    @RequiresRoles("admin")
     @GetMapping("/add")
     public String add()
     {
@@ -84,7 +84,7 @@ public class KbListController extends BaseController
     /**
      * 新增保存看板任务列
      */
-    @RequiresPermissions("ruoyi-kanban:list:add")
+    @RequiresRoles("admin")
     @Log(title = "看板任务列", businessType = BusinessType.INSERT)
     @PostMapping("/add")
     @ResponseBody
@@ -96,7 +96,7 @@ public class KbListController extends BaseController
     /**
      * 修改看板任务列
      */
-    @RequiresPermissions("ruoyi-kanban:list:edit")
+    @RequiresRoles("admin")
     @GetMapping("/edit/{listId}")
     public String edit(@PathVariable("listId") Long listId, ModelMap mmap)
     {
@@ -108,7 +108,7 @@ public class KbListController extends BaseController
     /**
      * 修改保存看板任务列
      */
-    @RequiresPermissions("ruoyi-kanban:list:edit")
+    @RequiresRoles("admin")
     @Log(title = "看板任务列", businessType = BusinessType.UPDATE)
     @PostMapping("/edit")
     @ResponseBody
@@ -120,7 +120,7 @@ public class KbListController extends BaseController
     /**
      * 删除看板任务列
      */
-    @RequiresPermissions("ruoyi-kanban:list:remove")
+    @RequiresRoles("admin")
     @Log(title = "看板任务列", businessType = BusinessType.DELETE)
     @PostMapping( "/remove")
     @ResponseBody

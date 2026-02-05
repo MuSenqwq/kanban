@@ -61,7 +61,7 @@ public class KbBoardController extends BaseController
     /**
      * 导出任务看板列表
      */
-    @RequiresPermissions("kanban:board:export")
+    @RequiresRoles(value = {"admin", "common"}, logical = Logical.OR)
     @Log(title = "任务看板", businessType = BusinessType.EXPORT)
     @PostMapping("/export")
     @ResponseBody
@@ -75,7 +75,7 @@ public class KbBoardController extends BaseController
     /**
      * 新增任务看板
      */
-    @RequiresPermissions("kanban:board:add")
+    @RequiresRoles("admin")
     @GetMapping("/add")
     public String add()
     {
@@ -85,7 +85,7 @@ public class KbBoardController extends BaseController
     /**
      * 新增保存任务看板
      */
-    @RequiresPermissions("kanban:board:add")
+   @RequiresRoles("admin")
     @Log(title = "任务看板", businessType = BusinessType.INSERT)
     @PostMapping("/add")
     @ResponseBody
@@ -97,7 +97,7 @@ public class KbBoardController extends BaseController
     /**
      * 修改任务看板
      */
-    @RequiresPermissions("kanban:board:edit")
+    @RequiresRoles("admin")
     @GetMapping("/edit/{boardId}")
     public String edit(@PathVariable("boardId") Long boardId, ModelMap mmap)
     {
@@ -109,19 +109,25 @@ public class KbBoardController extends BaseController
     /**
      * 修改保存任务看板
      */
-    @RequiresPermissions("kanban:board:edit")
+    @RequiresRoles("admin")
     @Log(title = "任务看板", businessType = BusinessType.UPDATE)
     @PostMapping("/edit")
     @ResponseBody
     public AjaxResult editSave(KbBoard kbBoard)
     {
+        System.out.println(2);
+        if(kbBoard!=null){
+            System.out.println(3);
+        }else {
+            System.out.println(1);
+        }
         return toAjax(kbBoardService.updateKbBoard(kbBoard));
     }
 
     /**
      * 删除任务看板
      */
-    @RequiresPermissions("kanban:board:remove")
+    @RequiresRoles("admin")
     @Log(title = "任务看板", businessType = BusinessType.DELETE)
     @PostMapping( "/remove")
     @ResponseBody

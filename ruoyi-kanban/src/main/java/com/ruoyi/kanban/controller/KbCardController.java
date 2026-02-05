@@ -60,7 +60,7 @@ public class KbCardController extends BaseController
     /**
      * 导出任务卡片列表
      */
-    @RequiresPermissions("kanban:card:export")
+    @RequiresRoles(value = {"admin", "common"}, logical = Logical.OR)
     @Log(title = "任务卡片", businessType = BusinessType.EXPORT)
     @PostMapping("/export")
     @ResponseBody
@@ -74,7 +74,7 @@ public class KbCardController extends BaseController
     /**
      * 新增任务卡片
      */
-    @RequiresPermissions("kanban:card:add")
+    @RequiresRoles("admin")
     @GetMapping("/add")
     public String add()
     {
@@ -84,7 +84,7 @@ public class KbCardController extends BaseController
     /**
      * 新增保存任务卡片
      */
-    @RequiresPermissions("kanban:card:add")
+    @RequiresRoles("admin")
     @Log(title = "任务卡片", businessType = BusinessType.INSERT)
     @PostMapping("/add")
     @ResponseBody
@@ -96,7 +96,7 @@ public class KbCardController extends BaseController
     /**
      * 修改任务卡片
      */
-    @RequiresPermissions("kanban:card:edit")
+    @RequiresRoles("admin")
     @GetMapping("/edit/{cardId}")
     public String edit(@PathVariable("cardId") Long cardId, ModelMap mmap)
     {
@@ -108,7 +108,7 @@ public class KbCardController extends BaseController
     /**
      * 修改保存任务卡片
      */
-    @RequiresPermissions("kanban:card:edit")
+    @RequiresRoles("admin")
     @Log(title = "任务卡片", businessType = BusinessType.UPDATE)
     @PostMapping("/edit")
     @ResponseBody
@@ -121,7 +121,6 @@ public class KbCardController extends BaseController
      * 删除任务卡片
      */
     @RequiresRoles("admin")
-    @RequiresPermissions("kanban:card:remove")
     @Log(title = "任务卡片", businessType = BusinessType.DELETE)
     @PostMapping( "/remove")
     @ResponseBody
@@ -130,7 +129,7 @@ public class KbCardController extends BaseController
         return toAjax(kbCardService.deleteKbCardByCardIds(ids));
     }
 
-    @RequiresPermissions("kanban:card:edit")
+    @RequiresRoles("admin")
     @Log(title = "任务卡片", businessType = BusinessType.UPDATE)
     @PostMapping("/changeOrder")
     @ResponseBody

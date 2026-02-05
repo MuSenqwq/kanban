@@ -226,7 +226,7 @@
             </div>
         </form>
 
-        <a class="btn-create" onclick="$.operate.add()" shiro:hasPermission="kanban:board:add">
+        <a class="btn-create" shiro:hasRole="admin">
             <i class="fa fa-plus"></i> 创建看板
         </a>
     </div>
@@ -247,6 +247,31 @@
     var removeFlag = [[${@permission.hasPermi('kanban:board:remove')}]];
     var datas = [[${@dict.getType('sys_normal_disable')}]];
     var prefix = ctx + "kanban/board";
+    var currentLayerIndex;
+    var editLayerIndex;
+    //创建看板
+    $(function() {
+        loadBoardList();
+        function openBoardAddPage() {
+            if (currentLayerIndex) {
+                parent.layer.close(currentLayerIndex);
+            }
+            currentLayerIndex = layer.open({
+                type: 2,
+                title: "创建看板",
+                content: prefix + "/add",
+                area: ["700px", "400px"],
+                end: function() {
+                    currentLayerIndex = null;
+                    loadBoardList();
+                }
+            });
+        }
+
+        $(".btn-create").off("click").click(function() {
+            openBoardAddPage();
+        });
+    });
 
     $(function() {
         loadBoardList();
@@ -299,7 +324,7 @@
             // 2. 右上角操作按钮 (阻止冒泡)
             html.push('    <div class="card-actions" onclick="event.stopPropagation()">');
             if (editFlag !== 'hidden') {
-                html.push('      <a class="action-icon" title="设置" onclick="$.operate.edit(\'' + row.boardId + '\')"><i class="fa fa-cog"></i></a>');
+                html.push('      <a class="action-icon" title="设置" onclick="openBoardEditPage(\'' + row.boardId + '\')"><i class="fa fa-cog"></i></a>');
             }
             if (removeFlag !== 'hidden') {
                 html.push('      <a class="action-icon delete" title="删除" onclick="deleteBoard(\'' + row.boardId + '\')"><i class="fa fa-trash-o"></i></a>');
@@ -344,6 +369,19 @@
                     $.modal.alertError(result.msg);
                 }
             });
+        });
+    }
+//编辑
+    function openBoardEditPage(boardId) {
+        editLayerIndex = layer.open({
+            type: 2,
+            title: "编辑看板",
+            content: prefix + "/edit/" + boardId,
+            area: ["700px", "400px"],
+            end: function() {
+                editLayerIndex = null;
+                loadBoardList();
+            }
         });
     }
 

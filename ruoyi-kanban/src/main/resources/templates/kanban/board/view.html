@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<html lang="zh" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.w3.org/1999/xhtml">
 <head>
   <th:block th:include="include :: header('任务看板')" />
   <style>
@@ -187,12 +187,12 @@
 
       </div>
 
-      <div class="list-footer" onclick="openAddCard(this)" th:data-list-id="${list.listId}">
+      <div class="list-footer" onclick="openAddCard(this)" th:data-list-id="${list.listId}" shiro:hasRole="admin">
         <i class="fa fa-plus"></i> 添加卡片
       </div>
     </div>
 
-    <div class="kanban-list" style="background:rgba(0,0,0,0.1); color:#fff; min-width:280px; cursor:pointer; display:flex; align-items:center; justify-content:center; height:50px;" onclick="addList()">
+    <div class="kanban-list" style="background:rgba(0,0,0,0.1); color:#fff; min-width:280px; cursor:pointer; display:flex; align-items:center; justify-content:center; height:50px;" onclick="addList()" shiro:hasRole="admin" >
       <i class="fa fa-plus"></i> 新建列表
     </div>
   </div>

@@ -6,6 +6,7 @@
 <body class="white-bg">
 <div class="wrapper wrapper-content animated fadeInRight ibox-content">
     <form class="form-horizontal m" id="form-board-add">
+        <!-- 原有表单字段不变，保留所有内容 -->
         <div class="form-group">
             <label class="col-sm-3 control-label is-required">看板名称：</label>
             <div class="col-sm-8">
@@ -39,18 +40,33 @@
                 </div>
             </div>
         </div>
+
+        <!-- 新增：页面内的提交按钮（和项目样式统一） -->
+        <div class="form-group">
+            <div class="col-sm-8 col-sm-offset-3">
+                <button type="button" class="btn btn-primary" onclick="submitHandler()">提交</button>
+                <button type="button" class="btn btn-default" onclick="closeCurrentBoardModal()">取消</button>
+            </div>
+        </div>
     </form>
 </div>
 <th:block th:include="include :: footer" />
 <script th:inline="javascript">
-    var prefix = ctx + "kanban/board"
+    var prefix = ctx + "kanban/board";
     $("#form-board-add").validate({
         focusCleanup: true
     });
-
     function submitHandler() {
         if ($.validate.form()) {
             $.operate.save(prefix + "/add", $('#form-board-add').serialize());
+        }
+    }
+
+    function closeCurrentBoardModal() {
+        if (parent.currentLayerIndex) {
+            parent.layer.close(parent.currentLayerIndex);
+        } else {
+            parent.layer.closeAll();
         }
     }
 </script>
