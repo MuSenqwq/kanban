@@ -62,6 +62,8 @@
             <if test="isExcellent != null">is_excellent,</if>
             <if test="createBy != null">create_by,</if>
             <if test="createTime != null">create_time,</if>
+            <if test="updateBy != null">update_by,</if>
+            <if test="updateTime != null">update_time,</if>
         </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="listId != null">#{listId},</if>
@@ -92,9 +94,8 @@
             <if test="orderNum != null">order_num = #{orderNum},</if>
             <if test="status != null">status = #{status},</if>
             <if test="progress != null">progress = #{progress},</if>
-            <if test="executorId != null">executor_id = #{executorId},</if>
-            <if test="isExcellent != null">is_excellent = #{isExcellent},</if>
-            <if test="finishTime != null">finish_time = #{finishTime},</if>
+            <if test="createBy != null">create_by = #{createBy},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
             <if test="updateBy != null">update_by = #{updateBy},</if>
             <if test="updateTime != null">update_time = #{updateTime},</if>
         </trim>
