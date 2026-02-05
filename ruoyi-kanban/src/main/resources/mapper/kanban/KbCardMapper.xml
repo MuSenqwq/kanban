@@ -15,6 +15,9 @@
         <result property="orderNum"    column="order_num"    />
         <result property="status"    column="status"    />
         <result property="progress"    column="progress"    />
+        <result property="executorId"    column="executor_id"    />
+        <result property="isExcellent"    column="is_excellent"    />
+        <result property="finishTime"    column="finish_time"    />
         <result property="createBy"    column="create_by"    />
         <result property="createTime"    column="create_time"    />
         <result property="updateBy"    column="update_by"    />
@@ -22,7 +25,7 @@
     </resultMap>
 
     <sql id="selectKbCardVo">
-        select card_id, list_id, board_id, card_title, card_content, priority, deadline, order_num, status, progress, create_by, create_time, update_by, update_time from kb_card
+        select card_id, list_id, board_id, card_title, card_content, priority, deadline, order_num, status, progress, executor_id, is_excellent, finish_time, create_by, create_time, update_by, update_time from kb_card
     </sql>
 
     <select id="selectKbCardList" parameterType="KbCard" resultMap="KbCardResult">
@@ -32,9 +35,8 @@
             <if test="boardId != null "> and board_id = #{boardId}</if>
             <if test="cardTitle != null  and cardTitle != ''"> and card_title like concat('%', #{cardTitle}, '%')</if>
             <if test="priority != null  and priority != ''"> and priority = #{priority}</if>
-            <if test="deadline != null "> and deadline = #{deadline}</if>
-            <if test="orderNum != null "> and order_num = #{orderNum}</if>
             <if test="status != null  and status != ''"> and status = #{status}</if>
+            <if test="executorId != null "> and executor_id = #{executorId}</if>
         </where>
         order by order_num asc, create_time desc
     </select>
@@ -56,10 +58,10 @@
             <if test="orderNum != null">order_num,</if>
             <if test="status != null">status,</if>
             <if test="progress != null">progress,</if>
+            <if test="executorId != null">executor_id,</if>
+            <if test="isExcellent != null">is_excellent,</if>
             <if test="createBy != null">create_by,</if>
             <if test="createTime != null">create_time,</if>
-            <if test="updateBy != null">update_by,</if>
-            <if test="updateTime != null">update_time,</if>
         </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="listId != null">#{listId},</if>
@@ -71,10 +73,10 @@
             <if test="orderNum != null">#{orderNum},</if>
             <if test="status != null">#{status},</if>
             <if test="progress != null">#{progress},</if>
+            <if test="executorId != null">#{executorId},</if>
+            <if test="isExcellent != null">#{isExcellent},</if>
             <if test="createBy != null">#{createBy},</if>
             <if test="createTime != null">#{createTime},</if>
-            <if test="updateBy != null">#{updateBy},</if>
-            <if test="updateTime != null">#{updateTime},</if>
         </trim>
     </insert>
 
@@ -90,8 +92,9 @@
             <if test="orderNum != null">order_num = #{orderNum},</if>
             <if test="status != null">status = #{status},</if>
             <if test="progress != null">progress = #{progress},</if>
-            <if test="createBy != null">create_by = #{createBy},</if>
-            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="executorId != null">executor_id = #{executorId},</if>
+            <if test="isExcellent != null">is_excellent = #{isExcellent},</if>
+            <if test="finishTime != null">finish_time = #{finishTime},</if>
             <if test="updateBy != null">update_by = #{updateBy},</if>
             <if test="updateTime != null">update_time = #{updateTime},</if>
         </trim>
@@ -108,5 +111,50 @@
             #{cardId}
         </foreach>
     </delete>
+
+    <select id="selectTaskPoolList" resultMap="KbCardResult">
+        SELECT DISTINCT c.* FROM kb_card c
+                                     LEFT JOIN kb_board b ON c.board_id = b.board_id
+                                     LEFT JOIN kb_board_member m ON c.board_id = m.board_id
+        WHERE (c.executor_id IS NULL OR c.executor_id = 0)
+          AND c.status != '2' AND (
+              b.user_id = #{userId}
+           OR m.user_id = #{userId}
+           OR c.create_by = (SELECT login_name FROM sys_user WHERE user_id = #{userId})
+            )
+        ORDER BY c.create_time DESC
+    </select>
+
+    <select id="selectUserTaskStats" resultType="java.util.Map">
+        SELECT
+            IFNULL((SELECT count(1) FROM kb_card WHERE executor_id = #{userId}), 0) as total,
+            IFNULL((SELECT count(1) FROM kb_card WHERE executor_id = #{userId} AND status = '0'), 0) as pending,
+            IFNULL((SELECT count(1) FROM kb_card WHERE executor_id = #{userId} AND status = '1'), 0) as done,
+            IFNULL((SELECT count(1) FROM kb_card WHERE executor_id = #{userId} AND status = '0' AND deadline &lt; NOW()), 0) as overdue,
+            IFNULL((SELECT count(1) FROM kb_card WHERE executor_id = #{userId} AND status = '0' AND DATEDIFF(deadline, NOW()) = 1), 0) as tomorrow,
+            IFNULL((SELECT count(DISTINCT c.card_id) FROM kb_card c
+                                                              LEFT JOIN kb_board_member m ON c.board_id = m.board_id
+                    WHERE (c.executor_id IS NULL OR c.executor_id = 0)
+                      AND c.status = '0'
+                      AND (m.user_id = #{userId} OR c.create_by = (SELECT login_name FROM sys_user WHERE user_id = #{userId}))
+                   ), 0) as unassigned
+    </select>
+
+    <select id="selectUpcomingTasks" resultMap="KbCardResult">
+        <include refid="selectKbCardVo"/>
+        WHERE executor_id = #{userId}
+        AND status = '0'
+        AND deadline BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 7 DAY)
+        ORDER BY deadline ASC
+    </select>
+
+    <select id="countUnreadMessages" resultType="int">
+        SELECT count(1) FROM sys_user_message WHERE user_id = #{userId} AND is_read = '0'
+    </select>
+
+    <select id="selectTomorrowDeadlineCards" resultMap="KbCardResult">
+        <include refid="selectKbCardVo"/>
+        WHERE status = '0' AND DATEDIFF(deadline, NOW()) = 1
+    </select>
 
 </mapper>

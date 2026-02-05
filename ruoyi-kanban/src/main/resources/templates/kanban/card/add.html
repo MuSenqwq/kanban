@@ -5,89 +5,88 @@
     <th:block th:include="include :: datetimepicker-css" />
     <th:block th:include="include :: summernote-css" />
     <style>
-        input[type=range] {
-            -webkit-appearance: none;
-            width: 100%;
-            margin: 5px 0;
-        }
+        input[type=range] { -webkit-appearance: none; width: 100%; margin: 5px 0; }
         input[type=range]:focus { outline: none; }
-        input[type=range]::-webkit-slider-runnable-track {
-            width: 100%; height: 6px; cursor: pointer;
-            background: #e9ecef; border-radius: 3px;
-        }
-        input[type=range]::-webkit-slider-thumb {
-            height: 16px; width: 16px; border-radius: 50%;
-            background: #0079bf; cursor: pointer;
-            -webkit-appearance: none; margin-top: -5px;
-        }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cursor: pointer; background: #e9ecef; border-radius: 3px; }
+        input[type=range]::-webkit-slider-thumb { height: 16px; width: 16px; border-radius: 50%; background: #0079bf; cursor: pointer; -webkit-appearance: none; margin-top: -5px; }
     </style>
 </head>
 <body class="white-bg">
 <div class="wrapper wrapper-content animated fadeInRight ibox-content">
     <form class="form-horizontal m" id="form-card-add">
 
-        <input name="listId" type="hidden" th:value="${param.listId}" />
-        <input name="boardId" type="hidden" th:value="${param.boardId}" />
+        <th:block th:if="${boardId != null}">
+            <input name="boardId" type="hidden" th:value="${boardId}" />
+            <input name="listId" type="hidden" th:value="${listId}" />
+        </th:block>
 
-        <div class="col-xs-12">
+        <th:block th:if="${boardId == null}">
             <div class="form-group">
-                <label class="col-sm-3 control-label is-required">任务标题：</label>
+                <label class="col-sm-3 control-label is-required">归属看板：</label>
                 <div class="col-sm-8">
-                    <input name="cardTitle" class="form-control" type="text" required>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xs-12">
-            <div class="form-group">
-                <label class="col-sm-3 control-label">优先级：</label>
-                <div class="col-sm-8">
-                    <select name="priority" class="form-control" th:with="type=${@dict.getType('kb_card_priority')}">
-                        <option th:each="dict : ${type}" th:text="${dict.dictLabel}" th:value="${dict.dictValue}" th:selected="${dict.isDefault == 'Y'}"></option>
+                    <select name="boardId" class="form-control" onchange="loadLists(this.value)" required>
+                        <option value="">-- 请选择看板 --</option>
+                        <option th:each="b : ${boards}" th:value="${b.boardId}" th:text="${b.boardName}"></option>
                     </select>
                 </div>
             </div>
+            <div class="form-group">
+                <label class="col-sm-3 control-label is-required">归属清单：</label>
+                <div class="col-sm-8">
+                    <select name="listId" id="listSelect" class="form-control" required>
+                        <option value="">-- 请先选择看板 --</option>
+                    </select>
+                </div>
+            </div>
+        </th:block>
+
+        <div class="form-group">
+            <label class="col-sm-3 control-label is-required">任务标题：</label>
+            <div class="col-sm-8">
+                <input name="cardTitle" class="form-control" type="text" required>
+            </div>
         </div>
 
-        <div class="col-xs-12">
-            <div class="form-group">
-                <label class="col-sm-3 control-label">任务进度：</label>
-                <div class="col-sm-8">
-                    <div style="display: flex; align-items: center;">
-                        <input name="progress" type="range" min="0" max="100" value="0" step="5"
-                               style="flex-grow: 1; margin-right: 15px;"
-                               oninput="$('#prog-label').text(this.value + '%')">
+        <div class="form-group">
+            <label class="col-sm-3 control-label">优先级：</label>
+            <div class="col-sm-8">
+                <select name="priority" class="form-control" th:with="type=${@dict.getType('kb_card_priority')}">
+                    <option th:each="dict : ${type}" th:text="${dict.dictLabel}" th:value="${dict.dictValue}" th:selected="${dict.isDefault == 'Y'}"></option>
+                </select>
+            </div>
+        </div>
 
-                        <span id="prog-label" class="badge badge-primary" style="min-width: 45px; font-size: 13px;">0%</span>
-                    </div>
+        <div class="form-group">
+            <label class="col-sm-3 control-label">任务进度：</label>
+            <div class="col-sm-8">
+                <div style="display: flex; align-items: center;">
+                    <input name="progress" type="range" min="0" max="100" value="0" step="5"
+                           style="flex-grow: 1; margin-right: 15px;"
+                           oninput="$('#prog-label').text(this.value + '%')">
+                    <span id="prog-label" class="badge badge-primary" style="min-width: 45px; font-size: 13px;">0%</span>
                 </div>
             </div>
         </div>
 
-        <div class="col-xs-12">
-            <div class="form-group">
-                <label class="col-sm-3 control-label">截止时间：</label>
-                <div class="col-sm-8">
-                    <div class="input-group date">
-                        <input name="deadline" class="form-control" placeholder="yyyy-MM-dd" type="text">
-                        <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
-                    </div>
+        <div class="form-group">
+            <label class="col-sm-3 control-label">截止时间：</label>
+            <div class="col-sm-8">
+                <div class="input-group date">
+                    <input name="deadline" class="form-control" placeholder="yyyy-MM-dd" type="text">
+                    <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
                 </div>
             </div>
         </div>
 
-        <div class="col-xs-12">
-            <div class="form-group">
-                <label class="col-sm-3 control-label">任务详情：</label>
-                <div class="col-sm-8">
-                    <input type="hidden" class="form-control" name="cardContent">
-                    <div class="summernote" id="cardContent"></div>
-                </div>
+        <div class="form-group">
+            <label class="col-sm-3 control-label">任务详情：</label>
+            <div class="col-sm-8">
+                <input type="hidden" class="form-control" name="cardContent">
+                <div class="summernote" id="cardContent"></div>
             </div>
         </div>
 
         <input name="orderNum" type="hidden" value="0">
-
     </form>
 </div>
 <th:block th:include="include :: footer" />
@@ -95,44 +94,17 @@
 <th:block th:include="include :: summernote-js" />
 <script th:inline="javascript">
     var prefix = ctx + "kanban/card"
-    $("#form-card-add").validate({
-        focusCleanup: true
-    });
+    $("#form-card-add").validate({ focusCleanup: true });
 
     function submitHandler() {
         if ($.validate.form()) {
             $.operate.save(prefix + "/add", $('#form-card-add').serialize(), function(result) {
                 if (result.code === web_status.SUCCESS) {
                     $.modal.msgSuccess(result.msg);
-
-                    // [关键修复] 智能查找看板页面并刷新，绝不刷新主框架
-                    var targetWindow = null;
-
-                    // 1. 尝试获取可见的iframe (通常是当前激活的Tab)
-                    var activeFrame = parent.$("iframe:visible")[0];
-                    if (activeFrame && activeFrame.contentWindow.refreshBoard) {
-                        targetWindow = activeFrame.contentWindow;
-                    }
-
-                    // 2. 如果没找到，遍历所有iframe寻找包含 refreshBoard 方法的那个
-                    if (!targetWindow) {
-                        $(parent.document).find("iframe").each(function() {
-                            try {
-                                if (this.contentWindow.refreshBoard) {
-                                    targetWindow = this.contentWindow;
-                                    return false; // break loop
-                                }
-                            } catch(e) {}
-                        });
-                    }
-
-                    // 3. 执行刷新
-                    if (targetWindow) {
-                        targetWindow.refreshBoard();
-                    } else {
-                        console.warn("未找到看板页面，无法自动刷新，请手动刷新。");
-                    }
-
+                    // 尝试刷新父级页面（如果是看板视图）
+                    try { parent.refreshBoard(); } catch(e) {}
+                    // 尝试刷新表格（如果是任务池列表）
+                    try { parent.$.table.refresh(); } catch(e) {}
                     $.modal.close();
                 } else {
                     $.modal.alertError(result.msg);
@@ -141,45 +113,33 @@
         }
     }
 
-    $("input[name='deadline']").datetimepicker({
-        format: "yyyy-mm-dd",
-        minView: "month",
-        autoclose: true
-    });
+    // 动态加载清单列表
+    function loadLists(boardId) {
+        $("#listSelect").html('<option value="">加载中...</option>');
+        if(!boardId) {
+            $("#listSelect").html('<option value="">-- 请先选择看板 --</option>');
+            return;
+        }
+        $.get(prefix + "/getLists?boardId=" + boardId, function(res) {
+            var html = '<option value="">-- 请选择清单 --</option>';
+            if(res.data && res.data.length > 0) {
+                for(var i=0; i<res.data.length; i++) {
+                    html += '<option value="' + res.data[i].listId + '">' + res.data[i].listName + '</option>';
+                }
+            } else {
+                html = '<option value="">该看板下没有清单，请先去看板添加</option>';
+            }
+            $("#listSelect").html(html);
+        });
+    }
+
+    $("input[name='deadline']").datetimepicker({ format: "yyyy-mm-dd", minView: "month", autoclose: true });
 
     $(function() {
         $('.summernote').summernote({
-            lang: 'zh-CN',
-            height: 150,
-            dialogsInBody: true,
+            lang: 'zh-CN', height: 150, dialogsInBody: true,
             callbacks: {
-                onChange: function(contents, $edittable) {
-                    $("input[name='" + this.id + "']").val(contents);
-                },
-                onImageUpload: function(files) {
-                    var obj = this;
-                    var data = new FormData();
-                    data.append("file", files[0]);
-                    $.ajax({
-                        type: "post",
-                        url: ctx + "common/upload",
-                        data: data,
-                        cache: false,
-                        contentType: false,
-                        processData: false,
-                        dataType: 'json',
-                        success: function(result) {
-                            if (result.code == web_status.SUCCESS) {
-                                $('#' + obj.id).summernote('insertImage', result.url);
-                            } else {
-                                $.modal.alertError(result.msg);
-                            }
-                        },
-                        error: function(error) {
-                            $.modal.alertWarning("图片上传失败。");
-                        }
-                    });
-                }
+                onChange: function(contents) { $("input[name='" + this.id + "']").val(contents); }
             }
         });
     });

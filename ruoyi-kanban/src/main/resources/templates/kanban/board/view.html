@@ -1,60 +1,35 @@
 <!DOCTYPE html>
-<html lang="zh" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.w3.org/1999/xhtml">
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
 <head>
   <th:block th:include="include :: header('任务看板')" />
   <style>
     body { background-color: #f4f5f7; overflow: hidden; }
 
-    /* 1. 顶部半透明磨砂导航栏 */
     .board-header {
-      height: 50px;
-      background: rgba(0,0,0,0.2);
-      backdrop-filter: blur(5px);
-      padding: 0 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      color: #fff;
+      height: 50px; background: rgba(0,0,0,0.2); backdrop-filter: blur(5px);
+      padding: 0 20px; display: flex; align-items: center; justify-content: space-between; color: #fff;
     }
     .board-title { font-size: 18px; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
-
-    /* 工具栏按钮组 */
     .header-tools { display: flex; gap: 10px; }
     .btn-tool {
       background: rgba(255,255,255,0.2); border: none; color: #fff;
-      padding: 5px 12px; border-radius: 3px; cursor: pointer; font-size: 13px;
-      transition: background 0.2s;
+      padding: 5px 12px; border-radius: 3px; cursor: pointer; font-size: 13px; transition: background 0.2s;
     }
     .btn-tool:hover { background: rgba(255,255,255,0.3); }
-
-    /* 搜索框 */
     .quick-search {
       background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);
-      color: #fff; padding: 5px 10px; border-radius: 3px; width: 150px;
-      transition: width 0.2s;
+      color: #fff; padding: 5px 10px; border-radius: 3px; width: 150px; transition: width 0.2s;
     }
     .quick-search:focus { width: 220px; background: #fff; color: #333; outline: none; }
-    .quick-search::placeholder { color: rgba(255,255,255,0.8); }
 
-    /* 2. 看板主体容器 */
     .kanban-board-wrapper {
-      display: flex;
-      overflow-x: auto;
-      overflow-y: hidden;
-      height: calc(100vh - 50px);
-      padding: 15px;
-      align-items: flex-start;
-      white-space: nowrap;
+      display: flex; overflow-x: auto; overflow-y: hidden;
+      height: calc(100vh - 50px); padding: 15px; align-items: flex-start; white-space: nowrap;
     }
 
-    /* 列样式 */
     .kanban-list {
-      background-color: #ebecf0;
-      width: 280px; min-width: 280px;
-      margin-right: 15px;
-      border-radius: 6px;
-      display: flex; flex-direction: column;
-      max-height: 100%;
+      background-color: #ebecf0; width: 280px; min-width: 280px; margin-right: 15px;
+      border-radius: 6px; display: flex; flex-direction: column; max-height: 100%;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     .list-header {
@@ -63,61 +38,35 @@
     }
     .list-count { background: #dfe1e6; padding: 2px 8px; border-radius: 10px; font-size: 11px; }
 
-    /* 卡片区域 */
-    .list-cards {
-      flex: 1; overflow-y: auto; padding: 0 8px 8px;
-      min-height: 10px;
-      scrollbar-width: thin;
-    }
+    .list-cards { flex: 1; overflow-y: auto; padding: 0 8px 8px; min-height: 10px; scrollbar-width: thin; }
 
-    /* --- 核心：卡片样式升级 --- */
+    /* 卡片样式核心 */
     .kanban-card {
-      background-color: #fff;
-      padding: 10px;
-      border-radius: 4px;
-      margin-bottom: 8px;
-      box-shadow: 0 1px 2px rgba(9,30,66,.25);
-      cursor: pointer;
-      position: relative;
-      border-left: 4px solid transparent; /* 优先级色条预留 */
-      transition: transform 0.1s;
+      background-color: #fff; padding: 10px; border-radius: 4px; margin-bottom: 8px;
+      box-shadow: 0 1px 2px rgba(9,30,66,.25); cursor: pointer; position: relative;
+      border-left: 4px solid transparent; transition: transform 0.1s;
     }
     .kanban-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(9,30,66,.25); }
 
-    /* 优先级色条 */
-    .kanban-card.p-0 { border-left-color: #ff5252; } /* 紧急-红 */
-    .kanban-card.p-1 { border-left-color: #ff9800; } /* 高-橙 */
-    .kanban-card.p-2 { border-left-color: #2196f3; } /* 中-蓝 */
-    .kanban-card.p-3 { border-left-color: #9e9e9e; } /* 低-灰 */
+    .kanban-card.p-0 { border-left-color: #ff5252; }
+    .kanban-card.p-1 { border-left-color: #ff9800; }
+    .kanban-card.p-2 { border-left-color: #2196f3; }
+    .kanban-card.p-3 { border-left-color: #9e9e9e; }
 
-    /* 超期预警样式 */
     .kanban-card.is-overdue { background-color: #fff5f5; border: 1px solid #ffdede; border-left: 4px solid #ff5252; }
-    .overdue-badge {
-      color: #c92a2a; font-size: 10px; font-weight: bold;
-      display: block; margin-bottom: 4px;
-    }
+    .overdue-badge { color: #c92a2a; font-size: 10px; font-weight: bold; display: block; margin-bottom: 4px; }
 
     .card-title { font-size: 14px; color: #172b4d; margin-bottom: 6px; white-space: normal; line-height: 1.4; }
 
-    /* 进度条 */
-    .progress-mini {
-      height: 6px; background-color: #e9ecef; border-radius: 3px; margin: 8px 0; overflow: hidden;
-    }
-    .progress-bar-mini {
-      height: 100%; background-color: #2196f3; border-radius: 3px;
-      transition: width 0.3s;
-    }
-    /* 进度颜色变化 */
-    .progress-100 { background-color: #4caf50; } /* 完成变绿 */
+    .progress-mini { height: 6px; background-color: #e9ecef; border-radius: 3px; margin: 8px 0; overflow: hidden; }
+    .progress-bar-mini { height: 100%; background-color: #2196f3; border-radius: 3px; }
+    .progress-100 { background-color: #4caf50; }
 
-    .card-meta { display: flex; justify-content: space-between; font-size: 11px; color: #5e6c84; }
+    .card-meta { display: flex; justify-content: space-between; font-size: 11px; color: #5e6c84; align-items: center; }
 
-    .list-footer {
-      padding: 8px; margin: 0 4px 4px; cursor: pointer; color: #5e6c84; border-radius: 4px;
-    }
+    .list-footer { padding: 8px; margin: 0 4px 4px; cursor: pointer; color: #5e6c84; border-radius: 4px; }
     .list-footer:hover { background: rgba(9,30,66,.08); color: #172b4d; }
 
-    /* 统计弹窗样式 */
     .chart-container { display: flex; padding: 20px; }
     .chart-box { width: 50%; height: 350px; }
     .stat-cards { display: flex; justify-content: space-around; margin-bottom: 10px; padding: 15px; background: #f8f9fa; border-radius: 5px; }
@@ -137,18 +86,12 @@
     </div>
     <div class="header-tools">
       <input type="text" id="filterInput" class="quick-search" placeholder="筛选任务..." onkeyup="filterCards()">
-
-      <button class="btn-tool" onclick="openStats()">
-        <i class="fa fa-pie-chart"></i> 数据分析
-      </button>
-      <button class="btn-tool" onclick="refreshBoard()">
-        <i class="fa fa-refresh"></i>
-      </button>
+      <button class="btn-tool" onclick="openStats()"><i class="fa fa-pie-chart"></i> 数据分析</button>
+      <button class="btn-tool" onclick="refreshBoard()"><i class="fa fa-refresh"></i></button>
     </div>
   </div>
 
   <div class="kanban-board-wrapper">
-
     <div class="kanban-list" th:each="list : ${lists}" th:data-list-id="${list.listId}">
       <div class="list-header">
         <span th:text="${list.listName}">列表名称</span>
@@ -162,37 +105,53 @@
 
         <div class="kanban-card" th:each="card : ${list.cards}"
              th:data-card-id="${card.cardId}"
-             th:classappend="'p-' + ${card.priority} + (${card.deadline != null && card.deadline.before(#dates.createNow()) && card.progress < 100} ? ' is-overdue' : '')"
+             th:classappend="'p-' + ${card.priority} + (${card.deadline != null && card.deadline.before(#dates.createNow()) && card.status != '1'} ? ' is-overdue' : '')"
              th:onclick="'editCard(\'' + ${card.cardId} + '\')'">
 
-            <span class="overdue-badge" th:if="${card.deadline != null && card.deadline.before(#dates.createNow()) && card.progress < 100}">
+          <div th:if="${card.isExcellent == 'Y'}" style="position:absolute; right:8px; top:8px; color:#f1c40f; font-size:14px;" title="优秀任务">
+            <i class="fa fa-trophy"></i>
+          </div>
+
+          <span class="overdue-badge" th:if="${card.deadline != null && card.deadline.before(#dates.createNow()) && card.status != '1'}">
                 <i class="fa fa-exclamation-circle"></i> 已超期
             </span>
 
           <div class="card-title" th:text="${card.cardTitle}">任务标题</div>
 
-          <div class="progress-mini" th:if="${card.progress != null}">
+          <div class="progress-mini" th:if="${card.progress != null && card.status != '1'}">
             <div class="progress-bar-mini"
                  th:style="'width:' + ${card.progress} + '%'"
                  th:classappend="${card.progress == 100} ? 'progress-100' : ''"></div>
           </div>
 
           <div class="card-meta">
-                <span th:if="${card.deadline != null}">
-                    <i class="fa fa-calendar"></i> <span th:text="${#dates.format(card.deadline, 'MM-dd')}"></span>
+                <span th:if="${card.executorId != null}" style="display: flex; align-items: center;" title="执行人">
+                    <i class="fa fa-user-circle-o" style="margin-right:4px;"></i>
+                    <span th:text="${card.executorId}"></span>
                 </span>
-            <span th:if="${card.progress != null}" th:text="${card.progress} + '%'">0%</span>
+            <span th:if="${card.executorId == null}" style="color: #ccc;">
+                    <i class="fa fa-question-circle-o"></i> 待认领
+                </span>
+
+            <div style="text-align: right;">
+                    <span th:if="${card.status == '1' && card.finishTime != null}" style="color: #27c24c; font-weight: bold;">
+                        <i class="fa fa-check"></i> <span th:text="${#dates.format(card.finishTime, 'MM-dd')}"></span>
+                    </span>
+              <span th:if="${card.status != '1' && card.deadline != null}" th:title="'截止: ' + ${#dates.format(card.deadline, 'yyyy-MM-dd')}">
+                        <i class="fa fa-clock-o"></i> <span th:text="${#dates.format(card.deadline, 'MM-dd')}"></span>
+                    </span>
+            </div>
           </div>
         </div>
 
       </div>
 
-      <div class="list-footer" onclick="openAddCard(this)" th:data-list-id="${list.listId}" shiro:hasRole="admin">
+      <div class="list-footer" onclick="openAddCard(this)" th:data-list-id="${list.listId}">
         <i class="fa fa-plus"></i> 添加卡片
       </div>
     </div>
 
-    <div class="kanban-list" style="background:rgba(0,0,0,0.1); color:#fff; min-width:280px; cursor:pointer; display:flex; align-items:center; justify-content:center; height:50px;" onclick="addList()" shiro:hasRole="admin" >
+    <div class="kanban-list" style="background:rgba(0,0,0,0.1); color:#fff; min-width:280px; cursor:pointer; display:flex; align-items:center; justify-content:center; height:50px;" onclick="addList()">
       <i class="fa fa-plus"></i> 新建列表
     </div>
   </div>
@@ -200,15 +159,9 @@
 
 <div id="statsModal" style="display:none; padding:15px;">
   <div class="stat-cards">
-    <div class="stat-item">
-      <div class="stat-num" id="s-total">0</div><div class="stat-desc">总任务</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-num" id="s-done" style="color:#4caf50;">0</div><div class="stat-desc">已完成</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-num" id="s-rate">0%</div><div class="stat-desc">完成率</div>
-    </div>
+    <div class="stat-item"><div class="stat-num" id="s-total">0</div><div class="stat-desc">总任务</div></div>
+    <div class="stat-item"><div class="stat-num" id="s-done" style="color:#4caf50;">0</div><div class="stat-desc">已完成</div></div>
+    <div class="stat-item"><div class="stat-num" id="s-rate">0%</div><div class="stat-desc">完成率</div></div>
   </div>
   <div class="chart-container">
     <div id="pieChart" class="chart-box"></div>
@@ -224,16 +177,8 @@
   var listPrefix = ctx + "ruoyi-kanban/list";
   var currentBoardId = [[${boardId}]];
 
-  $(function() {
-    initDrag();
-  });
-
-  // [必须保留] 供子窗口调用的刷新方法
-  window.refreshBoard = function() {
-    window.location.reload();
-  }
-  // 兼容别名，防止其他地方调用报错
-  window.refreshTable = window.refreshBoard;
+  $(function() { initDrag(); });
+  window.refreshBoard = function() { window.location.reload(); }
 
   function initDrag() {
     var containers = document.querySelectorAll('.sortable-area');
@@ -242,24 +187,16 @@
         group: 'kanban', animation: 150, ghostClass: 'sortable-ghost', delay: 0,
         onEnd: function (evt) {
           var itemEl = evt.item;
-          var toList = evt.to;
-          var fromList = evt.from;
-          var cardId = itemEl.getAttribute('data-card-id');
-          var toListId = toList.getAttribute('data-list-id');
-          var newOrderIds = Array.from(toList.children).map(function(card) { return card.getAttribute('data-card-id'); }).join(',');
+          var toListId = evt.to.getAttribute('data-list-id');
+          var newOrderIds = Array.from(evt.to.children).map(function(card) { return card.getAttribute('data-card-id'); }).join(',');
 
-          updateListCount(toList);
-          if (toList !== fromList) updateListCount(fromList);
+          updateListCount(evt.to);
+          if (evt.to !== evt.from) updateListCount(evt.from);
 
           $.ajax({
             url: cardPrefix + "/changeOrder", type: "post", dataType: "json",
-            data: { "cardId": cardId, "listId": toListId, "sortOrder": newOrderIds },
-            success: function(res) {
-              if (res.code !== 0) {
-                $.modal.msgError(res.msg);
-                refreshBoard();
-              }
-            }
+            data: { "cardId": itemEl.getAttribute('data-card-id'), "listId": toListId, "sortOrder": newOrderIds },
+            success: function(res) { if (res.code !== 0) { $.modal.msgError(res.msg); refreshBoard(); } }
           })
         }
       });
@@ -269,10 +206,7 @@
   function updateListCount(container) {
     var count = container.children.length;
     var header = container.previousElementSibling;
-    if (header) {
-      var countSpan = header.querySelector('.list-count');
-      if (countSpan) countSpan.innerText = count;
-    }
+    if (header) header.querySelector('.list-count').innerText = count;
   }
 
   function filterCards() {
@@ -287,40 +221,14 @@
     layer.open({
       type: 1, title: '看板数据驾驶舱', area: ['900px', '550px'], content: $('#statsModal'),
       success: function() {
-        $.get(ctx + "kanban/view/stats/" + currentBoardId, function(res) {
-          if(res.code === 0) renderCharts(res.data);
+        $.get(ctx + "kanban/main/stats", function(res) { // 复用首页统计接口或新建
+          if(res.code === 0) {
+            $("#s-total").text(res.data.total);
+            $("#s-done").text(res.data.done);
+            // 这里只展示了数字，图表数据建议另写接口获取
+          }
         });
       }
-    });
-  }
-
-  function renderCharts(data) {
-    $("#s-total").text(data.total);
-    $("#s-done").text(data.done);
-    var rate = data.total > 0 ? Math.round((data.done/data.total)*100) : 0;
-    $("#s-rate").text(rate + "%");
-
-    var pieData = [];
-    for(var i=0; i<data.listNames.length; i++) pieData.push({value: data.listCounts[i], name: data.listNames[i]});
-
-    var pie = echarts.init(document.getElementById('pieChart'));
-    pie.setOption({
-      title: { text: '任务分布', left: 'center' },
-      tooltip: { trigger: 'item' },
-      series: [{ type: 'pie', radius: ['40%', '70%'], data: pieData }]
-    });
-
-    var bar = echarts.init(document.getElementById('barChart'));
-    var pMap = data.priorityStats;
-    bar.setOption({
-      title: { text: '优先级统计', left: 'center' },
-      tooltip: { trigger: 'axis' },
-      xAxis: { type: 'category', data: ['紧急', '高', '中', '低'] },
-      yAxis: { type: 'value' },
-      series: [{
-        type: 'bar', data: [pMap['0']||0, pMap['1']||0, pMap['2']||0, pMap['3']||0],
-        itemStyle: { color: function(p) { return ['#ff5252','#ff9800','#2196f3','#9e9e9e'][p.dataIndex]; } }
-      }]
     });
   }
 
@@ -329,7 +237,7 @@
     $.modal.open("添加卡片", cardPrefix + "/add?listId=" + listId + "&boardId=" + currentBoardId, 800, 600);
   }
   function editCard(id) {
-    $.modal.open("修改卡片", cardPrefix + "/edit/" + id, 800, 600);
+    $.modal.open("任务详情", cardPrefix + "/edit/" + id, 800, 600);
   }
   function addList() {
     layer.prompt({title: '列表名称'}, function(val, index){
@@ -342,7 +250,6 @@
       $.operate.post(listPrefix + "/remove", {ids: id}, function(res){ if(res.code==0) refreshBoard(); });
     });
   }
-  function refreshBoard() { location.reload(); }
 </script>
 </body>
 </html>

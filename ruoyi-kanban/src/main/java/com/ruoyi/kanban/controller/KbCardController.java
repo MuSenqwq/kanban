@@ -1,10 +1,11 @@
 package com.ruoyi.kanban.controller;
 
 import java.util.List;
-
-import org.apache.shiro.authz.annotation.Logical;
+import com.ruoyi.kanban.domain.KbBoard;
+import com.ruoyi.kanban.domain.KbList;
+import com.ruoyi.kanban.service.IKbBoardService;
+import com.ruoyi.kanban.service.IKbListService;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
-import org.apache.shiro.authz.annotation.RequiresRoles;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -21,12 +22,10 @@ import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.utils.poi.ExcelUtil;
 import com.ruoyi.common.core.page.TableDataInfo;
+import com.ruoyi.common.utils.ShiroUtils;
 
 /**
  * 任务卡片Controller
- *
- * @author ruoyi
- * @date 2026-02-03
  */
 @Controller
 @RequestMapping("/kanban/card")
@@ -37,17 +36,22 @@ public class KbCardController extends BaseController
     @Autowired
     private IKbCardService kbCardService;
 
-    @RequiresRoles(value = {"admin", "common"}, logical = Logical.OR)
+    @Autowired
+    private IKbBoardService kbBoardService; // [新增]
+
+    @Autowired
+    private IKbListService kbListService;   // [新增]
+
+    // --- 标准CRUD接口 ---
+
+    @RequiresPermissions("kanban:card:view")
     @GetMapping()
     public String card()
     {
         return prefix + "/card";
     }
 
-    /**
-     * 查询任务卡片列表
-     */
-    @RequiresRoles(value = {"admin", "common"}, logical = Logical.OR)
+    @RequiresPermissions("kanban:card:list")
     @PostMapping("/list")
     @ResponseBody
     public TableDataInfo list(KbCard kbCard)
@@ -57,10 +61,7 @@ public class KbCardController extends BaseController
         return getDataTable(list);
     }
 
-    /**
-     * 导出任务卡片列表
-     */
-    @RequiresRoles(value = {"admin", "common"}, logical = Logical.OR)
+    @RequiresPermissions("kanban:card:export")
     @Log(title = "任务卡片", businessType = BusinessType.EXPORT)
     @PostMapping("/export")
     @ResponseBody
@@ -68,35 +69,52 @@ public class KbCardController extends BaseController
     {
         List<KbCard> list = kbCardService.selectKbCardList(kbCard);
         ExcelUtil<KbCard> util = new ExcelUtil<KbCard>(KbCard.class);
-        return util.exportExcel(list, "任务卡片数据");
+        return util.exportExcel(list, "card");
     }
 
     /**
-     * 新增任务卡片
+     * 新增任务卡片 (修改版：支持从任务池进入)
      */
-    @RequiresRoles("admin")
     @GetMapping("/add")
-    public String add()
+    public String add(Long listId, Long boardId, ModelMap mmap)
     {
+        // 如果是从任务池点的新增，没有 boardId，需要加载所有可选看板供用户选择
+        if (boardId == null) {
+            KbBoard query = new KbBoard();
+            // 这里简单查询所有，实际项目可根据 userId 过滤: query.setUserId(ShiroUtils.getUserId());
+            List<KbBoard> boards = kbBoardService.selectKbBoardList(query);
+            mmap.put("boards", boards);
+        }
+
+        mmap.put("listId", listId);
+        mmap.put("boardId", boardId);
         return prefix + "/add";
     }
 
     /**
-     * 新增保存任务卡片
+     * [新增接口] 根据看板ID获取清单列表 (用于下拉框联动)
      */
-    @RequiresRoles("admin")
+    @GetMapping("/getLists")
+    @ResponseBody
+    public AjaxResult getLists(Long boardId) {
+        if (boardId == null) return AjaxResult.error();
+        KbList query = new KbList();
+        query.setBoardId(boardId);
+        return AjaxResult.success(kbListService.selectKbListList(query));
+    }
+
+    @RequiresPermissions("kanban:card:add")
     @Log(title = "任务卡片", businessType = BusinessType.INSERT)
     @PostMapping("/add")
     @ResponseBody
     public AjaxResult addSave(KbCard kbCard)
     {
+        if (kbCard.getListId() == null || kbCard.getBoardId() == null) {
+            return error("归属看板和清单不能为空");
+        }
         return toAjax(kbCardService.insertKbCard(kbCard));
     }
 
-    /**
-     * 修改任务卡片
-     */
-    @RequiresRoles("admin")
     @GetMapping("/edit/{cardId}")
     public String edit(@PathVariable("cardId") Long cardId, ModelMap mmap)
     {
@@ -105,10 +123,7 @@ public class KbCardController extends BaseController
         return prefix + "/edit";
     }
 
-    /**
-     * 修改保存任务卡片
-     */
-    @RequiresRoles("admin")
+    @RequiresPermissions("kanban:card:edit")
     @Log(title = "任务卡片", businessType = BusinessType.UPDATE)
     @PostMapping("/edit")
     @ResponseBody
@@ -117,10 +132,7 @@ public class KbCardController extends BaseController
         return toAjax(kbCardService.updateKbCard(kbCard));
     }
 
-    /**
-     * 删除任务卡片
-     */
-    @RequiresRoles("admin")
+    @RequiresPermissions("kanban:card:remove")
     @Log(title = "任务卡片", businessType = BusinessType.DELETE)
     @PostMapping( "/remove")
     @ResponseBody
@@ -129,13 +141,46 @@ public class KbCardController extends BaseController
         return toAjax(kbCardService.deleteKbCardByCardIds(ids));
     }
 
-    @RequiresRoles("admin")
-    @Log(title = "任务卡片", businessType = BusinessType.UPDATE)
     @PostMapping("/changeOrder")
     @ResponseBody
-    public AjaxResult changeOrder(Long cardId, Long listId, String sortOrder)
-    {
+    public AjaxResult changeOrder(Long cardId, Long listId, String sortOrder) {
         return toAjax(kbCardService.changeCardOrder(cardId, listId, sortOrder));
     }
 
+    // --- 业务接口 ---
+
+    @GetMapping("/my")
+    public String myTasks() { return prefix + "/my"; }
+
+    @PostMapping("/my/list")
+    @ResponseBody
+    public TableDataInfo myList(KbCard kbCard) {
+        startPage();
+        kbCard.setExecutorId(ShiroUtils.getUserId());
+        List<KbCard> list = kbCardService.selectKbCardList(kbCard);
+        return getDataTable(list);
+    }
+
+    @GetMapping("/pool")
+    public String taskPool() { return prefix + "/pool"; }
+
+    @PostMapping("/pool/list")
+    @ResponseBody
+    public TableDataInfo poolList() {
+        startPage();
+        List<KbCard> list = kbCardService.selectTaskPoolList(ShiroUtils.getUserId());
+        return getDataTable(list);
+    }
+
+    @PostMapping("/claim")
+    @ResponseBody
+    public AjaxResult claim(Long cardId) {
+        return toAjax(kbCardService.claimTask(cardId, ShiroUtils.getUserId()));
+    }
+
+    @PostMapping("/complete")
+    @ResponseBody
+    public AjaxResult complete(Long cardId) {
+        return toAjax(kbCardService.completeTask(cardId));
+    }
 }
