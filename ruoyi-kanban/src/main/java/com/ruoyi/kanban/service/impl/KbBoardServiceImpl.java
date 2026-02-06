@@ -29,6 +29,7 @@ public class KbBoardServiceImpl implements IKbBoardService
     @Override
     public KbBoard selectKbBoardByBoardId(Long boardId)
     {
+
         return kbBoardMapper.selectKbBoardByBoardId(boardId);
     }
 
@@ -40,7 +41,6 @@ public class KbBoardServiceImpl implements IKbBoardService
     @Override
     public List<KbBoard> selectKbBoardList(KbBoard kbBoard)
     {
-        // [修改点] 强制过滤当前登录用户，只能看到自己的看板
         kbBoard.setUserId(ShiroUtils.getUserId());
         return kbBoardMapper.selectKbBoardList(kbBoard);
     }

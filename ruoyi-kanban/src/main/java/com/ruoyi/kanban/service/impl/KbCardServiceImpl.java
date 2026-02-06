@@ -4,6 +4,7 @@ import java.util.List;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.common.exception.ServiceException;
+import com.ruoyi.kanban.domain.AssignUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.ruoyi.kanban.mapper.KbCardMapper;
@@ -112,5 +113,10 @@ public class KbCardServiceImpl implements IKbCardService
         card.setFinishTime(DateUtils.getNowDate());
         card.setUpdateTime(DateUtils.getNowDate());
         return kbCardMapper.updateKbCard(card);
+    }
+    @Override
+    public List<AssignUser> selectAllAssignUser() {
+        // 直接调用Mapper层的方法（下一步会给Mapper加这个方法）
+        return kbCardMapper.selectAllAssignUser();
     }
 }

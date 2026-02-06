@@ -98,6 +98,7 @@
             <if test="createTime != null">create_time = #{createTime},</if>
             <if test="updateBy != null">update_by = #{updateBy},</if>
             <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="executorId != null">executor_id = #{executorId},</if>
         </trim>
         where card_id = #{cardId}
     </update>
@@ -157,5 +158,12 @@
         <include refid="selectKbCardVo"/>
         WHERE status = '0' AND DATEDIFF(deadline, NOW()) = 1
     </select>
-
+    <select id="selectAllAssignUser" resultType="com.ruoyi.kanban.domain.AssignUser">
+        select
+        user_id as userId,
+        user_name as userName
+        from sys_user
+        where status = '0'
+        order by create_time desc
+    </select>
 </mapper>

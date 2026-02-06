@@ -1,6 +1,8 @@
 package com.ruoyi.kanban.service;
 
 import java.util.List;
+
+import com.ruoyi.kanban.domain.AssignUser;
 import com.ruoyi.kanban.domain.KbCard;
 
 public interface IKbCardService
@@ -23,4 +25,6 @@ public interface IKbCardService
 
     // 完成任务
     public int completeTask(Long cardId);
+    //查询指派名单
+    public List<AssignUser> selectAllAssignUser();
 }

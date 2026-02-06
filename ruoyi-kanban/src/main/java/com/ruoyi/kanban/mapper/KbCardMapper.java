@@ -2,6 +2,8 @@ package com.ruoyi.kanban.mapper;
 
 import java.util.List;
 import java.util.Map;
+
+import com.ruoyi.kanban.domain.AssignUser;
 import com.ruoyi.kanban.domain.KbCard;
 
 public interface KbCardMapper
@@ -21,4 +23,5 @@ public interface KbCardMapper
     public List<KbCard> selectUpcomingTasks(Long userId);
     public int countUnreadMessages(Long userId);
     public List<KbCard> selectTomorrowDeadlineCards();
+    public List<AssignUser> selectAllAssignUser();
 }

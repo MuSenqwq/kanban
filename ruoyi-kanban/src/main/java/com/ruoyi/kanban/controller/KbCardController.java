@@ -1,6 +1,8 @@
 package com.ruoyi.kanban.controller;
 
 import java.util.List;
+
+import com.ruoyi.kanban.domain.AssignUser;
 import com.ruoyi.kanban.domain.KbBoard;
 import com.ruoyi.kanban.domain.KbList;
 import com.ruoyi.kanban.service.IKbBoardService;
@@ -9,11 +11,7 @@ import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 import com.ruoyi.common.annotation.Log;
 import com.ruoyi.common.enums.BusinessType;
 import com.ruoyi.kanban.domain.KbCard;
@@ -23,6 +21,8 @@ import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.utils.poi.ExcelUtil;
 import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.utils.ShiroUtils;
+
+
 
 /**
  * 任务卡片Controller
@@ -41,6 +41,7 @@ public class KbCardController extends BaseController
 
     @Autowired
     private IKbListService kbListService;   // [新增]
+
 
     // --- 标准CRUD接口 ---
 
@@ -85,7 +86,6 @@ public class KbCardController extends BaseController
             List<KbBoard> boards = kbBoardService.selectKbBoardList(query);
             mmap.put("boards", boards);
         }
-
         mmap.put("listId", listId);
         mmap.put("boardId", boardId);
         return prefix + "/add";
@@ -176,11 +176,27 @@ public class KbCardController extends BaseController
     @ResponseBody
     public AjaxResult claim(Long cardId) {
         return toAjax(kbCardService.claimTask(cardId, ShiroUtils.getUserId()));
+
     }
 
     @PostMapping("/complete")
     @ResponseBody
     public AjaxResult complete(Long cardId) {
         return toAjax(kbCardService.completeTask(cardId));
+    }
+
+    // 查询所有可指派的用户列表
+    @GetMapping("/assignUser")
+    @ResponseBody
+    public AjaxResult listUser(@RequestParam(name = "cardId")String cardId) {
+        System.out.println("=====请求到达/assignUser，cardId：" + cardId + "====");
+        List<AssignUser> users = kbCardService.selectAllAssignUser();
+        return AjaxResult.success("查询可指派用户成功", users).put("cardId", cardId);
+    }
+
+    @PostMapping("/assign")
+    @ResponseBody
+    public AjaxResult assign(@RequestParam Long cardId, @RequestParam Long executorId) {
+        return toAjax(kbCardService.claimTask(cardId, executorId));
     }
 }
