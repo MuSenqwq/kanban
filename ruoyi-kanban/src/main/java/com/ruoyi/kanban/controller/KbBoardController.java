@@ -2,6 +2,10 @@ package com.ruoyi.kanban.controller;
 
 import java.util.List;
 
+import com.ruoyi.common.core.domain.entity.SysUser;
+import com.ruoyi.kanban.domain.KbBoardMember;
+import com.ruoyi.kanban.service.IKbBoardMemberService;
+import com.ruoyi.system.service.ISysUserService;
 import org.apache.shiro.authz.annotation.Logical;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.apache.shiro.authz.annotation.RequiresRoles;
@@ -33,6 +37,12 @@ import com.ruoyi.common.core.page.TableDataInfo;
 public class KbBoardController extends BaseController
 {
     private String prefix = "kanban/board"; // [修改点] 对应 templates/kanban/board 目录
+    @Autowired
+    private IKbBoardMemberService kbBoardMemberService; // [新增] 成员服务
+
+    @Autowired
+    private ISysUserService userService; // [新增] 用户服务
+
 
     @Autowired
     private IKbBoardService kbBoardService;
@@ -44,19 +54,6 @@ public class KbBoardController extends BaseController
         return prefix + "/board";
     }
 
-    /**
-     * 查询任务看板列表
-     */
-
-    @RequiresRoles(value = {"admin", "common"}, logical = Logical.OR)
-    @PostMapping("/list")
-    @ResponseBody
-    public TableDataInfo list(KbBoard kbBoard)
-    {
-        startPage();
-        List<KbBoard> list = kbBoardService.selectKbBoardList(kbBoard);
-        return getDataTable(list);
-    }
 
     /**
      * 导出任务看板列表
@@ -135,4 +132,46 @@ public class KbBoardController extends BaseController
     {
         return toAjax(kbBoardService.deleteKbBoardByBoardIds(ids));
     }
+    @RequiresRoles(value = {"admin", "common"}, logical = Logical.OR)
+    @PostMapping("/list")
+    @ResponseBody
+    public TableDataInfo list(KbBoard kbBoard)
+    {
+        startPage();
+        List<KbBoard> list = kbBoardService.selectKbBoardList(kbBoard);
+        return getDataTable(list);
+    }
+
+    // [新增方法] 跳转到邀请成员页面
+    @GetMapping("/invite/{boardId}")
+    public String invite(@PathVariable("boardId") Long boardId, ModelMap mmap)
+    {
+        mmap.put("boardId", boardId);
+        // 获取所有用户供选择 (实际场景可优化为搜索或过滤)
+        mmap.put("users", userService.selectUserList(new SysUser()));
+        return prefix + "/invite";
+    }
+
+    // [新增方法] 保存成员
+    @Log(title = "看板成员", businessType = BusinessType.INSERT)
+    @PostMapping("/addMember")
+    @ResponseBody
+    public AjaxResult addMemberSave(KbBoardMember kbBoardMember)
+    {
+        return toAjax(kbBoardMemberService.insertKbBoardMember(kbBoardMember));
+    }
+
+    // [新增方法] 获取当前看板成员列表(用于管理界面)
+    @PostMapping("/listMembers")
+    @ResponseBody
+    public TableDataInfo listMembers(KbBoardMember kbBoardMember)
+    {
+        startPage();
+        List<KbBoardMember> list = kbBoardMemberService.selectKbBoardMemberList(kbBoardMember);
+        return getDataTable(list);
+    }
+
+
+
+
 }

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org" >
+<head>
+    <th:block th:include="include :: header('邀请成员')" />
+    <th:block th:include="include :: select2-css" />
+</head>
+<body class="white-bg">
+<div class="wrapper wrapper-content animated fadeInRight ibox-content">
+    <form class="form-horizontal m" id="form-member-add">
+        <input name="boardId" type="hidden" th:value="${boardId}" />
+
+        <div class="form-group">
+            <label class="col-sm-3 control-label is-required">选择用户：</label>
+            <div class="col-sm-8">
+                <select id="userId" name="userId" class="form-control select2-multiple" multiple>
+                    <option th:each="user : ${users}" th:value="${user.userId}" th:text="${user.userName} + ' (' + ${user.loginName} + ')'"></option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="col-sm-3 control-label">角色：</label>
+            <div class="col-sm-8">
+                <div class="radio-box">
+                    <input type="radio" id="role1" name="role" value="1" checked>
+                    <label for="role1">普通成员</label>
+                </div>
+                <div class="radio-box">
+                    <input type="radio" id="role2" name="role" value="0">
+                    <label for="role2">管理员</label>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+<th:block th:include="include :: footer" />
+<th:block th:include="include :: select2-js" />
+<script type="text/javascript">
+    var prefix = ctx + "kanban/board";
+
+    function submitHandler() {
+        if ($.validate.form()) {
+            var userIds = $.form.selectSelects("userId");
+            if(userIds == ""){
+                $.modal.alertWarning("请至少选择一个用户");
+                return;
+            }
+            // 这里为了简单，如果有多个用户，需要循环或者后端支持数组
+            // 演示单选或利用 split 在后端处理，或者循环调用。
+            // 这里我们假设后端暂只接受单个，或者前端循环提交。
+            // 为了更好的体验，我们修改一下逻辑：只取第一个选中的（如果后端insertKbBoardMember只接单个对象）
+            // 或者：修改前端逻辑循环提交。
+
+            var boardId = $("input[name='boardId']").val();
+            var role = $("input[name='role']:checked").val();
+            var users = $("#userId").val(); // array
+
+            if (!users || users.length == 0) {
+                $.modal.alertWarning("请选择用户");
+                return;
+            }
+
+            // 循环保存 (简单暴力)
+            var successCount = 0;
+            for(var i=0; i<users.length; i++){
+                var data = { "boardId": boardId, "userId": users[i], "role": role };
+                $.ajax({
+                    url: prefix + "/addMember",
+                    type: "post",
+                    data: data,
+                    async: false, // 同步以确保顺序
+                    success: function(res) {
+                        if(res.code == 0) successCount++;
+                    }
+                });
+            }
+            $.modal.msgSuccess("已尝试添加 " + users.length + " 位成员");
+            $.modal.close();
+            parent.refreshBoard(); // 刷新父页面
+        }
+    }
+</script>
+</body>
+</html>

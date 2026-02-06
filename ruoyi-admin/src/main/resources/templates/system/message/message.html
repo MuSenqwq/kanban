@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.pollix.at/thymeleaf/shiro">
+<head>
+    <th:block th:include="include :: header('我的消息')" />
+</head>
+<body class="gray-bg">
+<div class="container-div">
+    <div class="row">
+        <div class="col-sm-12 search-collapse">
+            <form id="formId">
+                <div class="select-list">
+                    <ul>
+                        <li>
+                            状态：
+                            <select name="isRead">
+                                <option value="">所有</option>
+                                <option value="0">未读</option>
+                                <option value="1">已读</option>
+                            </select>
+                        </li>
+                        <li>
+                            <a class="btn btn-primary btn-rounded btn-sm" onclick="$.table.search()"><i class="fa fa-search"></i>&nbsp;搜索</a>
+                            <a class="btn btn-warning btn-rounded btn-sm" onclick="$.form.reset()"><i class="fa fa-refresh"></i>&nbsp;重置</a>
+                        </li>
+                    </ul>
+                </div>
+            </form>
+        </div>
+
+        <div class="btn-group-sm" id="toolbar" role="group">
+            <a class="btn btn-success" onclick="markReadAll()">
+                <i class="fa fa-check"></i> 全部已读
+            </a>
+        </div>
+        <div class="col-sm-12 select-table table-striped">
+            <table id="bootstrap-table"></table>
+        </div>
+    </div>
+</div>
+<th:block th:include="include :: footer" />
+<script th:inline="javascript">
+    var prefix = ctx + "system/message";
+
+    $(function() {
+        var options = {
+            url: prefix + "/list",
+            modalName: "消息",
+            columns: [{
+                checkbox: true
+            },
+                {
+                    field: 'messageId',
+                    title: 'ID',
+                    visible: false
+                },
+                {
+                    field: 'title',
+                    title: '标题',
+                    formatter: function(value, row, index) {
+                        // 如果未读，加粗显示
+                        if (row.isRead == '0') {
+                            return '<span style="font-weight:bold; color:#ff0000;">[未读] ' + value + '</span>';
+                        }
+                        return '<span style="color:#999;">[已读] ' + value + '</span>';
+                    }
+                },
+                {
+                    field: 'content',
+                    title: '内容'
+                },
+                {
+                    field: 'createTime',
+                    title: '时间'
+                },
+                {
+                    title: '操作',
+                    align: 'center',
+                    formatter: function(value, row, index) {
+                        var actions = [];
+                        if (row.isRead == '0') {
+                            actions.push('<a class="btn btn-success btn-xs" href="javascript:void(0)" onclick="markRead(\'' + row.messageId + '\')"><i class="fa fa-check"></i> 标为已读</a> ');
+                        }
+                        return actions.join('');
+                    }
+                }]
+        };
+        $.table.init(options);
+    });
+
+    function markRead(id) {
+        $.operate.post(prefix + "/read", { "messageId": id }, function(){
+            $.table.refresh();
+        });
+    }
+
+    function markReadAll() {
+        $.operate.post(prefix + "/readAll", {}, function(){
+            $.table.refresh();
+            $.modal.msgSuccess("所有消息已标记为已读");
+        });
+    }
+</script>
+</body>
+</html>

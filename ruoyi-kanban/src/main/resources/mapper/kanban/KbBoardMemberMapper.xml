@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.kanban.mapper.KbBoardMemberMapper">
+
+    <resultMap type="KbBoardMember" id="KbBoardMemberResult">
+        <result property="id"    column="id"    />
+        <result property="boardId"    column="board_id"    />
+        <result property="userId"    column="user_id"    />
+        <result property="role"    column="role"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="userName"    column="user_name"    />
+    </resultMap>
+
+    <sql id="selectKbBoardMemberVo">
+        select m.id, m.board_id, m.user_id, m.role, m.create_time, u.user_name
+        from kb_board_member m
+                 left join sys_user u on m.user_id = u.user_id
+    </sql>
+
+    <select id="selectKbBoardMemberList" parameterType="KbBoardMember" resultMap="KbBoardMemberResult">
+        <include refid="selectKbBoardMemberVo"/>
+        <where>
+            <if test="boardId != null "> and m.board_id = #{boardId}</if>
+            <if test="userId != null "> and m.user_id = #{userId}</if>
+            <if test="role != null  and role != ''"> and m.role = #{role}</if>
+        </where>
+    </select>
+
+    <select id="checkMemberUnique" parameterType="KbBoardMember" resultType="int">
+        select count(1) from kb_board_member where board_id = #{boardId} and user_id = #{userId}
+    </select>
+
+    <insert id="insertKbBoardMember" parameterType="KbBoardMember" useGeneratedKeys="true" keyProperty="id">
+        insert into kb_board_member
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="boardId != null">board_id,</if>
+            <if test="userId != null">user_id,</if>
+            <if test="role != null">role,</if>
+            <if test="createTime != null">create_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="boardId != null">#{boardId},</if>
+            <if test="userId != null">#{userId},</if>
+            <if test="role != null">#{role},</if>
+            <if test="createTime != null">#{createTime},</if>
+        </trim>
+    </insert>
+
+    <delete id="deleteKbBoardMemberById" parameterType="Long">
+        delete from kb_board_member where id = #{id}
+    </delete>
+</mapper>

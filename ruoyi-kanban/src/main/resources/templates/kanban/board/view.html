@@ -86,6 +86,7 @@
     </div>
     <div class="header-tools">
       <input type="text" id="filterInput" class="quick-search" placeholder="筛选任务..." onkeyup="filterCards()">
+      <button class="btn-tool" onclick="openInviteMember()"><i class="fa fa-user-plus"></i> 邀请成员</button>
       <button class="btn-tool" onclick="openStats()"><i class="fa fa-pie-chart"></i> 数据分析</button>
       <button class="btn-tool" onclick="refreshBoard()"><i class="fa fa-refresh"></i></button>
     </div>
@@ -227,6 +228,11 @@
             $("#s-done").text(res.data.done);
             // 这里只展示了数字，图表数据建议另写接口获取
           }
+          // [新增] 如果有未读消息，弹窗提示或显示在页面某处
+          if (res.data.unreadMsg > 0) {
+            // 简单粗暴：直接弹窗提示
+            layer.alert('您有 ' + res.data.unreadMsg + ' 条未读消息，请前往【系统管理-我的消息】查看。');
+          }
         });
       }
     });
@@ -250,6 +256,13 @@
       $.operate.post(listPrefix + "/remove", {ids: id}, function(res){ if(res.code==0) refreshBoard(); });
     });
   }
+
+  function openInviteMember() {
+    var url = ctx + "kanban/board/invite/" + currentBoardId;
+    $.modal.open("邀请成员加入看板", url, 500, 400);
+  }
+
+
 </script>
 </body>
 </html>
