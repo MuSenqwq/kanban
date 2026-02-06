@@ -4,7 +4,7 @@ import java.util.List;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.common.exception.ServiceException;
-import com.ruoyi.common.core.domain.entity.SysUser; // 必须引入
+import com.ruoyi.common.core.domain.entity.SysUser; // 必须导入
 import com.ruoyi.kanban.domain.AssignUser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -13,9 +13,12 @@ import com.ruoyi.kanban.domain.KbCard;
 import com.ruoyi.kanban.service.IKbCardService;
 import com.ruoyi.common.core.text.Convert;
 import org.springframework.transaction.annotation.Transactional;
-import com.ruoyi.system.service.ISysUserMessageService; // [新增] 必须引入
-import com.ruoyi.system.service.ISysUserService;       // [新增] 必须引入
+import com.ruoyi.system.service.ISysUserMessageService; // [新增] 必须导入
+import com.ruoyi.system.service.ISysUserService;       // [新增] 必须导入
 
+/**
+ * 任务卡片Service业务层处理
+ */
 @Service
 public class KbCardServiceImpl implements IKbCardService
 {
@@ -38,6 +41,9 @@ public class KbCardServiceImpl implements IKbCardService
         return kbCardMapper.selectKbCardList(kbCard);
     }
 
+    /**
+     * 新增任务卡片（包含指派通知）
+     */
     @Override
     public int insertKbCard(KbCard kbCard) {
         kbCard.setCreateTime(DateUtils.getNowDate());
@@ -99,7 +105,7 @@ public class KbCardServiceImpl implements IKbCardService
     }
 
     /**
-     * 认领任务（防并发锁）
+     * 认领任务（防并发锁 + 认领通知）
      */
     @Override
     @Transactional
@@ -132,7 +138,7 @@ public class KbCardServiceImpl implements IKbCardService
     }
 
     /**
-     * 一键完成任务
+     * 一键完成任务（包含完成通知）
      */
     @Override
     public int completeTask(Long cardId) {

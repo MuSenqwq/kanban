@@ -175,17 +175,40 @@
 
 <script th:inline="javascript">
   var cardPrefix = ctx + "kanban/card";
-  var listPrefix = ctx + "ruoyi-kanban/list";
+  // [修复] 修正了之前错误的路径前缀
+  var listPrefix = ctx + "kanban/list";
   var currentBoardId = [[${boardId}]];
+  var autoRefreshTimer = null;
 
-  $(function() { initDrag(); });
+  $(function() {
+    initDrag();
+    // [新增] 页面加载完成后启动自动刷新
+    startAutoRefresh();
+  });
+
   window.refreshBoard = function() { window.location.reload(); }
+
+  // [新增] 自动刷新功能：每10秒检查一次
+  function startAutoRefresh() {
+    if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+    autoRefreshTimer = setInterval(function() {
+      // 这里可以做静默数据检查，或者直接刷新页面。
+      // 为了确保数据绝对同步，这里暂不自动刷新整个页面以免打断操作，
+      // 而是通过 openStats 里的逻辑来提示消息。
+      // 如果你希望页面自动 F5 刷新，请取消下一行的注释：
+      // window.location.reload();
+    }, 10000);
+  }
 
   function initDrag() {
     var containers = document.querySelectorAll('.sortable-area');
     containers.forEach(function(container) {
       new Sortable(container, {
         group: 'kanban', animation: 150, ghostClass: 'sortable-ghost', delay: 0,
+        // 拖拽开始时暂停刷新
+        onStart: function() {
+          if(autoRefreshTimer) clearInterval(autoRefreshTimer);
+        },
         onEnd: function (evt) {
           var itemEl = evt.item;
           var toListId = evt.to.getAttribute('data-list-id');
@@ -197,7 +220,14 @@
           $.ajax({
             url: cardPrefix + "/changeOrder", type: "post", dataType: "json",
             data: { "cardId": itemEl.getAttribute('data-card-id'), "listId": toListId, "sortOrder": newOrderIds },
-            success: function(res) { if (res.code !== 0) { $.modal.msgError(res.msg); refreshBoard(); } }
+            success: function(res) {
+              if (res.code !== 0) {
+                $.modal.msgError(res.msg);
+                refreshBoard();
+              }
+              // 操作结束后重启刷新
+              startAutoRefresh();
+            }
           })
         }
       });
@@ -219,38 +249,61 @@
   }
 
   function openStats() {
+    // 打开弹窗时暂停刷新
+    if(autoRefreshTimer) clearInterval(autoRefreshTimer);
+
     layer.open({
       type: 1, title: '看板数据驾驶舱', area: ['900px', '550px'], content: $('#statsModal'),
       success: function() {
-        $.get(ctx + "kanban/main/stats", function(res) { // 复用首页统计接口或新建
+        $.get(ctx + "kanban/main/stats", function(res) {
           if(res.code === 0) {
             $("#s-total").text(res.data.total);
             $("#s-done").text(res.data.done);
-            // 这里只展示了数字，图表数据建议另写接口获取
-          }
-          // [新增] 如果有未读消息，弹窗提示或显示在页面某处
-          if (res.data.unreadMsg > 0) {
-            // 简单粗暴：直接弹窗提示
-            layer.alert('您有 ' + res.data.unreadMsg + ' 条未读消息，请前往【系统管理-我的消息】查看。');
+            var rate = res.data.total > 0 ? Math.round((res.data.done / res.data.total) * 100) : 0;
+            $("#s-rate").text(rate + "%");
+
+            // [新增] 消息提示：如果有未读消息，弹窗告知用户
+            if (res.data.unreadMsg > 0) {
+              layer.confirm('您有 ' + res.data.unreadMsg + ' 条未读消息，是否前往查看？', {
+                icon: 3,
+                title:'新消息提醒',
+                btn: ['去查看', '稍后']
+              }, function(index){
+                layer.close(index);
+                // 跳转到我的消息页面（确保你在系统管理里配了这个菜单）
+                window.location.href = ctx + "system/message";
+              });
+            }
           }
         });
+      },
+      end: function() {
+        startAutoRefresh();
       }
     });
   }
 
   function openAddCard(el) {
     var listId = el.getAttribute('data-list-id');
-    $.modal.open("添加卡片", cardPrefix + "/add?listId=" + listId + "&boardId=" + currentBoardId, 800, 600);
+    // 关闭回调：增加刷新逻辑
+    $.modal.open("添加卡片", cardPrefix + "/add?listId=" + listId + "&boardId=" + currentBoardId, 800, 600, function() {
+      refreshBoard();
+    });
   }
+
   function editCard(id) {
-    $.modal.open("任务详情", cardPrefix + "/edit/" + id, 800, 600);
+    $.modal.open("任务详情", cardPrefix + "/edit/" + id, 800, 600, function() {
+      refreshBoard();
+    });
   }
+
   function addList() {
     layer.prompt({title: '列表名称'}, function(val, index){
       layer.close(index);
       $.operate.save(listPrefix + "/add", {boardId: currentBoardId, listName: val, orderNum: 99}, function(){ refreshBoard(); });
     });
   }
+
   function deleteList(id) {
     $.modal.confirm("确定删除该列表吗？", function() {
       $.operate.post(listPrefix + "/remove", {ids: id}, function(res){ if(res.code==0) refreshBoard(); });
@@ -259,10 +312,11 @@
 
   function openInviteMember() {
     var url = ctx + "kanban/board/invite/" + currentBoardId;
-    $.modal.open("邀请成员加入看板", url, 500, 400);
+    $.modal.open("邀请成员加入看板", url, 500, 400, function() {
+      // 关闭弹窗时刷新，确保下次指派任务时能看到新成员
+      refreshBoard();
+    });
   }
-
-
 </script>
 </body>
 </html>
