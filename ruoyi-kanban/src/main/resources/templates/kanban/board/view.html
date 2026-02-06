@@ -192,11 +192,7 @@
   function startAutoRefresh() {
     if (autoRefreshTimer) clearInterval(autoRefreshTimer);
     autoRefreshTimer = setInterval(function() {
-      // 这里可以做静默数据检查，或者直接刷新页面。
-      // 为了确保数据绝对同步，这里暂不自动刷新整个页面以免打断操作，
-      // 而是通过 openStats 里的逻辑来提示消息。
-      // 如果你希望页面自动 F5 刷新，请取消下一行的注释：
-      // window.location.reload();
+      // 静默检查/保留扩展点
     }, 10000);
   }
 
@@ -248,36 +244,104 @@
     });
   }
 
+  // ✅ 修复：数据分析真正渲染图表，并改为请求 /kanban/view/stats/{boardId}
   function openStats() {
     // 打开弹窗时暂停刷新
     if(autoRefreshTimer) clearInterval(autoRefreshTimer);
 
     layer.open({
-      type: 1, title: '看板数据驾驶舱', area: ['900px', '550px'], content: $('#statsModal'),
+      type: 1,
+      title: '看板数据驾驶舱',
+      area: ['900px', '550px'],
+      content: $('#statsModal'),
       success: function() {
-        $.get(ctx + "kanban/main/stats", function(res) {
-          if(res.code === 0) {
-            $("#s-total").text(res.data.total);
-            $("#s-done").text(res.data.done);
-            var rate = res.data.total > 0 ? Math.round((res.data.done / res.data.total) * 100) : 0;
-            $("#s-rate").text(rate + "%");
+        var pieDom = document.getElementById('pieChart');
+        var barDom = document.getElementById('barChart');
 
-            // [新增] 消息提示：如果有未读消息，弹窗告知用户
-            if (res.data.unreadMsg > 0) {
-              layer.confirm('您有 ' + res.data.unreadMsg + ' 条未读消息，是否前往查看？', {
-                icon: 3,
-                title:'新消息提醒',
-                btn: ['去查看', '稍后']
-              }, function(index){
-                layer.close(index);
-                // 跳转到我的消息页面（确保你在系统管理里配了这个菜单）
-                window.location.href = ctx + "system/message";
-              });
-            }
+        // 避免重复 init
+        var pieOld = echarts.getInstanceByDom(pieDom);
+        if (pieOld) { pieOld.dispose(); }
+        var barOld = echarts.getInstanceByDom(barDom);
+        if (barOld) { barOld.dispose(); }
+
+        var pieChart = echarts.init(pieDom);
+        var barChart = echarts.init(barDom);
+
+        // 1) 拉取看板统计（用于数字 + 图表）
+        $.get(ctx + "kanban/view/stats/" + currentBoardId, function(res) {
+          if(res.code !== 0) {
+            $.modal.msgError(res.msg || "获取看板统计失败");
+            return;
           }
+
+          var d = res.data || {};
+          var total = d.total || 0;
+          var done = d.done || 0;
+          var rate = total > 0 ? Math.round((done / total) * 100) : 0;
+
+          $("#s-total").text(total);
+          $("#s-done").text(done);
+          $("#s-rate").text(rate + "%");
+
+          // 优先级饼图
+          var priName = {"0":"紧急","1":"高","2":"中","3":"低"};
+          var priStats = d.priorityStats || {};
+          var pieData = [];
+          Object.keys(priName).forEach(function(k){
+            pieData.push({ name: priName[k], value: priStats[k] ? Number(priStats[k]) : 0 });
+          });
+
+          pieChart.setOption({
+            tooltip: { trigger: 'item' },
+            legend: { bottom: 0 },
+            series: [{
+              name: '优先级',
+              type: 'pie',
+              radius: ['35%', '65%'],
+              center: ['50%', '45%'],
+              data: pieData
+            }]
+          }, true);
+
+          // 各列任务数量柱图
+          var names = d.listNames || [];
+          var counts = d.listCounts || [];
+          barChart.setOption({
+            tooltip: { trigger: 'axis' },
+            xAxis: { type: 'category', data: names, axisLabel: { interval: 0, rotate: 20 } },
+            yAxis: { type: 'value' },
+            series: [{ name: '任务数', type: 'bar', data: counts }]
+          }, true);
+
+          // 弹层打开后 resize 一次，避免宽高计算问题
+          setTimeout(function(){
+            pieChart.resize();
+            barChart.resize();
+          }, 80);
+        });
+
+        // 2) 仍然保留“未读消息提醒”（不影响图表）
+        $.get(ctx + "kanban/main/stats", function(res) {
+          if(res.code === 0 && res.data && res.data.unreadMsg > 0) {
+            layer.confirm('您有 ' + res.data.unreadMsg + ' 条未读消息，是否前往查看？', {
+              icon: 3,
+              title:'新消息提醒',
+              btn: ['去查看', '稍后']
+            }, function(index){
+              layer.close(index);
+              window.location.href = ctx + "system/message";
+            });
+          }
+        });
+
+        // 窗口变化时同步 resize
+        $(window).off("resize.kanbanStats").on("resize.kanbanStats", function(){
+          pieChart.resize();
+          barChart.resize();
         });
       },
       end: function() {
+        $(window).off("resize.kanbanStats");
         startAutoRefresh();
       }
     });
@@ -285,7 +349,6 @@
 
   function openAddCard(el) {
     var listId = el.getAttribute('data-list-id');
-    // 关闭回调：增加刷新逻辑
     $.modal.open("添加卡片", cardPrefix + "/add?listId=" + listId + "&boardId=" + currentBoardId, 800, 600, function() {
       refreshBoard();
     });
@@ -313,7 +376,6 @@
   function openInviteMember() {
     var url = ctx + "kanban/board/invite/" + currentBoardId;
     $.modal.open("邀请成员加入看板", url, 500, 400, function() {
-      // 关闭弹窗时刷新，确保下次指派任务时能看到新成员
       refreshBoard();
     });
   }

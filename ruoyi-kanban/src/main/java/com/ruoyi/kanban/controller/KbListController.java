@@ -3,7 +3,6 @@ package com.ruoyi.kanban.controller;
 import java.util.List;
 
 import org.apache.shiro.authz.annotation.Logical;
-import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.apache.shiro.authz.annotation.RequiresRoles;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -24,12 +23,12 @@ import com.ruoyi.common.core.page.TableDataInfo;
 
 /**
  * 看板任务列Controller
- * 
+ *
  * @author ruoyi
  * @date 2026-02-03
  */
 @Controller
-@RequestMapping("/ruoyi-kanban/list")
+@RequestMapping({"/ruoyi-kanban/list", "/kanban/list"})
 public class KbListController extends BaseController
 {
     private String prefix = "ruoyi-kanban/list";
@@ -122,7 +121,7 @@ public class KbListController extends BaseController
      */
     @RequiresRoles("admin")
     @Log(title = "看板任务列", businessType = BusinessType.DELETE)
-    @PostMapping( "/remove")
+    @PostMapping("/remove")
     @ResponseBody
     public AjaxResult remove(String ids)
     {

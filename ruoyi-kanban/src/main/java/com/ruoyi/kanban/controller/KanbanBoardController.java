@@ -8,9 +8,6 @@ import com.ruoyi.kanban.domain.KbList;
 import com.ruoyi.kanban.service.IKbBoardService;
 import com.ruoyi.kanban.service.IKbCardService;
 import com.ruoyi.kanban.service.IKbListService;
-import org.apache.shiro.authz.annotation.Logical;
-import org.apache.shiro.authz.annotation.RequiresPermissions;
-import org.apache.shiro.authz.annotation.RequiresRoles;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.ModelMap;
@@ -44,7 +41,6 @@ public class KanbanBoardController extends BaseController {
     /**
      * 打开看板可视化页面
      */
-
     @GetMapping("/{boardId}")
     public String index(@PathVariable("boardId") Long boardId, ModelMap mmap) {
         // 1. 查询看板详情
@@ -77,7 +73,7 @@ public class KanbanBoardController extends BaseController {
     }
 
     /**
-     * [新增] 获取看板统计数据接口 (用于ECharts)
+     * 获取看板统计数据接口 (用于ECharts)
      */
     @GetMapping("/stats/{boardId}")
     @ResponseBody
@@ -90,10 +86,13 @@ public class KanbanBoardController extends BaseController {
         cardQuery.setBoardId(boardId);
         List<KbCard> cards = cardService.selectKbCardList(cardQuery);
 
-        // 统计1：各列任务数量
+        // 统计1：各列任务数量（修复：c.getListId() 可能为 null，避免NPE）
         List<String> listNames = lists.stream().map(KbList::getListName).collect(Collectors.toList());
         List<Integer> listCounts = lists.stream().map(list -> {
-            return (int) cards.stream().filter(c -> c.getListId().equals(list.getListId())).count();
+            Long listId = list.getListId();
+            return (int) cards.stream()
+                    .filter(c -> c.getListId() != null && c.getListId().equals(listId))
+                    .count();
         }).collect(Collectors.toList());
 
         // 统计2：优先级分布 (0=紧急, 1=高, 2=中, 3=低)
