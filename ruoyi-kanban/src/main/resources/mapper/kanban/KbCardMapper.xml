@@ -158,12 +158,27 @@
         <include refid="selectKbCardVo"/>
         WHERE status = '0' AND DATEDIFF(deadline, NOW()) = 1
     </select>
+
     <select id="selectAllAssignUser" resultType="com.ruoyi.kanban.domain.AssignUser">
         select
-        user_id as userId,
-        user_name as userName
+            user_id as userId,
+            user_name as userName
         from sys_user
         where status = '0'
         order by create_time desc
     </select>
+
+    <!-- ✅ 新增：只返回该任务所在看板的成员（用于指派弹窗） -->
+    <select id="selectAssignableUsersByCardId" parameterType="Long" resultType="com.ruoyi.kanban.domain.AssignUser">
+        SELECT
+            u.user_id AS userId,
+            u.user_name AS userName
+        FROM kb_card c
+                 JOIN kb_board_member m ON c.board_id = m.board_id
+                 JOIN sys_user u ON m.user_id = u.user_id
+        WHERE c.card_id = #{cardId}
+          AND u.status = '0'
+        ORDER BY u.create_time DESC
+    </select>
+
 </mapper>

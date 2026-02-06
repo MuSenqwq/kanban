@@ -131,6 +131,7 @@
                 if (res.code === 0) {
                     $.modal.msgSuccess("指派成功！");
                     $("#assignUserModal").modal("hide");
+                    $.table.refresh(); // ✅ 指派后刷新
                 } else {
                     $.modal.msgError("指派失败：" + res.msg);
                 }

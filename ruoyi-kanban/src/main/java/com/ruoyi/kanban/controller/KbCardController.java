@@ -22,8 +22,6 @@ import com.ruoyi.common.utils.poi.ExcelUtil;
 import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.utils.ShiroUtils;
 
-
-
 /**
  * 任务卡片Controller
  */
@@ -41,7 +39,6 @@ public class KbCardController extends BaseController
 
     @Autowired
     private IKbListService kbListService;   // [新增]
-
 
     // --- 标准CRUD接口 ---
 
@@ -176,7 +173,6 @@ public class KbCardController extends BaseController
     @ResponseBody
     public AjaxResult claim(Long cardId) {
         return toAjax(kbCardService.claimTask(cardId, ShiroUtils.getUserId()));
-
     }
 
     @PostMapping("/complete")
@@ -185,18 +181,22 @@ public class KbCardController extends BaseController
         return toAjax(kbCardService.completeTask(cardId));
     }
 
-    // 查询所有可指派的用户列表
+    /**
+     * 查询当前任务所在看板的“可指派成员”
+     */
     @GetMapping("/assignUser")
     @ResponseBody
-    public AjaxResult listUser(@RequestParam(name = "cardId")String cardId) {
-        System.out.println("=====请求到达/assignUser，cardId：" + cardId + "====");
-        List<AssignUser> users = kbCardService.selectAllAssignUser();
+    public AjaxResult listUser(@RequestParam(name = "cardId") Long cardId) {
+        List<AssignUser> users = kbCardService.selectAssignableUsers(cardId, ShiroUtils.getUserId());
         return AjaxResult.success("查询可指派用户成功", users).put("cardId", cardId);
     }
 
+    /**
+     * 指派执行人（仅看板管理员/看板创建者/系统管理员可操作）
+     */
     @PostMapping("/assign")
     @ResponseBody
     public AjaxResult assign(@RequestParam Long cardId, @RequestParam Long executorId) {
-        return toAjax(kbCardService.claimTask(cardId, executorId));
+        return toAjax(kbCardService.assignTask(cardId, executorId, ShiroUtils.getUserId()));
     }
 }

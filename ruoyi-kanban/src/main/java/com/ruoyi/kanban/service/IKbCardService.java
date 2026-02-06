@@ -23,8 +23,15 @@ public interface IKbCardService
     // 认领任务
     public int claimTask(Long cardId, Long userId);
 
+    // 指派任务（operatorId=操作人）
+    public int assignTask(Long cardId, Long executorId, Long operatorId);
+
     // 完成任务
     public int completeTask(Long cardId);
-    //查询指派名单
+
+    // 查询当前任务所在看板可指派成员（operatorId=操作人，用于权限校验）
+    public List<AssignUser> selectAssignableUsers(Long cardId, Long operatorId);
+
+    // 兼容保留：查询全量用户（如你别处还在用）
     public List<AssignUser> selectAllAssignUser();
 }
