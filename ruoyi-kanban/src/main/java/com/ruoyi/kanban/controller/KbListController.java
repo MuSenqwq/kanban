@@ -36,7 +36,7 @@ public class KbListController extends BaseController
     @Autowired
     private IKbListService kbListService;
 
-    @RequiresRoles(value = {"admin", "common"}, logical = Logical.OR)
+
     @GetMapping()
     public String list()
     {
@@ -48,7 +48,7 @@ public class KbListController extends BaseController
      */
     @PostMapping("/list")
     @ResponseBody
-    @RequiresRoles(value = {"admin", "common"}, logical = Logical.OR)
+
     public TableDataInfo list(KbList kbList)
     {
         startPage();
@@ -59,7 +59,7 @@ public class KbListController extends BaseController
     /**
      * 导出看板任务列列表
      */
-    @RequiresRoles(value = {"admin", "common"}, logical = Logical.OR)
+
     @Log(title = "看板任务列", businessType = BusinessType.EXPORT)
     @PostMapping("/export")
     @ResponseBody
@@ -73,7 +73,7 @@ public class KbListController extends BaseController
     /**
      * 新增看板任务列
      */
-    @RequiresRoles("admin")
+
     @GetMapping("/add")
     public String add()
     {
@@ -83,7 +83,7 @@ public class KbListController extends BaseController
     /**
      * 新增保存看板任务列
      */
-    @RequiresRoles("admin")
+
     @Log(title = "看板任务列", businessType = BusinessType.INSERT)
     @PostMapping("/add")
     @ResponseBody
@@ -95,7 +95,7 @@ public class KbListController extends BaseController
     /**
      * 修改看板任务列
      */
-    @RequiresRoles("admin")
+
     @GetMapping("/edit/{listId}")
     public String edit(@PathVariable("listId") Long listId, ModelMap mmap)
     {
@@ -107,7 +107,7 @@ public class KbListController extends BaseController
     /**
      * 修改保存看板任务列
      */
-    @RequiresRoles("admin")
+
     @Log(title = "看板任务列", businessType = BusinessType.UPDATE)
     @PostMapping("/edit")
     @ResponseBody
@@ -119,7 +119,7 @@ public class KbListController extends BaseController
     /**
      * 删除看板任务列
      */
-    @RequiresRoles("admin")
+
     @Log(title = "看板任务列", businessType = BusinessType.DELETE)
     @PostMapping("/remove")
     @ResponseBody

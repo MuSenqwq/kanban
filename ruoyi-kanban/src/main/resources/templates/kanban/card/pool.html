@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.pollix.at/thymeleaf/shiro">
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:include="include :: header('任务池')"/>
 </head>
@@ -25,7 +25,8 @@
         </div>
 
         <div class="btn-group-sm" id="toolbar" role="group">
-            <a class="btn btn-success" onclick="$.operate.add()">
+            <!-- 仅 admin 显示新建任务按钮（原生 th:if，无任何 Bean 依赖） -->
+            <a class="btn btn-success" onclick="$.operate.add()" th:if="${isAdmin}">
                 <i class="fa fa-plus"></i> 新建任务
             </a>
         </div>
@@ -39,7 +40,7 @@
     </div>
 </div>
 
-<!-- 新增：自定义指派执行人弹窗 -->
+<!-- 自定义指派执行人弹窗 -->
 <div id="assignUserModal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-sm" style="width:600px;">
         <div class="modal-content">
@@ -64,7 +65,10 @@
 <th:block th:include="include :: footer"/>
 <script th:inline="javascript">
     var prefix = ctx + "kanban/card";
-    var selectExecutorId = null
+    var selectExecutorId = null;
+    // 直接获取后端传递的 isAdmin 变量（原生语法，无 Bean 依赖）
+    var isAdmin = [[${isAdmin}]];
+
     function showAssignUserDialog(cardId) {
         selectExecutorId = null;
         $("#modalCardId").val(cardId);
@@ -103,6 +107,7 @@
         });
         $("#assignUserModal").modal("show");
     }
+
     function selectUser(obj, userId) {
         $(".user-item").removeClass("active").css({
             "background-color": "",
@@ -117,9 +122,9 @@
         selectExecutorId = userId;
     }
 
+    // 仅保留选中用户的基础校验，无权限提示
     function doAssign() {
         var cardId = $("#modalCardId").val();
-        // 校验是否选中用户
         if (!selectExecutorId) {
             $.modal.msgWarning("请先选择要指派的执行人！");
             return;
@@ -131,7 +136,7 @@
                 if (res.code === 0) {
                     $.modal.msgSuccess("指派成功！");
                     $("#assignUserModal").modal("hide");
-                    $.table.refresh(); // ✅ 指派后刷新
+                    $.table.refresh();
                 } else {
                     $.modal.msgError("指派失败：" + res.msg);
                 }
@@ -139,7 +144,7 @@
         );
     }
 
-    // 认领任务
+    // 认领任务：所有角色可见
     function claimTask(cardId) {
         $.modal.confirm("确定要认领这个任务吗？", function() {
             $.operate.post(prefix + "/claim", { "cardId": cardId }, function(res) {
@@ -190,14 +195,20 @@
                     title: '操作',
                     align: 'center',
                     formatter: function (value, row, index) {
-                        return `
+                        // 认领按钮：所有角色可见
+                        var btnHtml = `
                         <a class="btn btn-success btn-xs btn-claim" href="javascript:void(0)" data-cardid="${row.cardId}">
                             <i class="fa fa-hand-paper-o"></i> 认领
-                        </a>
-                        &nbsp;
-                        <a class="btn btn-primary btn-xs btn-assign" href="javascript:void(0)" data-cardid="${row.cardId}">
-                            <i class="fa fa-user-plus"></i> 指派
                         </a>`;
+                        // 仅 admin 显示指派按钮
+                        if (isAdmin) {
+                            btnHtml += `
+                            &nbsp;
+                            <a class="btn btn-primary btn-xs btn-assign" href="javascript:void(0)" data-cardid="${row.cardId}">
+                                <i class="fa fa-user-plus"></i> 指派
+                            </a>`;
+                        }
+                        return btnHtml;
                     },
                     events: {
                         'click .btn-claim': function (e, value, row, index) {
@@ -214,7 +225,6 @@
     });
 </script>
 
-<!-- 自定义样式：用户选中激活效果 -->
 <style>
     .user-item:hover {
         background-color: #f5f5f5;

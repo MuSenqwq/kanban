@@ -47,7 +47,6 @@ public class KbBoardController extends BaseController
     @Autowired
     private IKbBoardService kbBoardService;
 
-    @RequiresRoles(value = {"admin", "common"}, logical = Logical.OR)
     @GetMapping()
     public String board()
     {
@@ -58,7 +57,6 @@ public class KbBoardController extends BaseController
     /**
      * 导出任务看板列表
      */
-    @RequiresRoles(value = {"admin", "common"}, logical = Logical.OR)
     @Log(title = "任务看板", businessType = BusinessType.EXPORT)
     @PostMapping("/export")
     @ResponseBody
@@ -72,7 +70,6 @@ public class KbBoardController extends BaseController
     /**
      * 新增任务看板
      */
-    @RequiresRoles("admin")
     @GetMapping("/add")
     public String add()
     {
@@ -82,7 +79,6 @@ public class KbBoardController extends BaseController
     /**
      * 新增保存任务看板
      */
-   @RequiresRoles("admin")
     @Log(title = "任务看板", businessType = BusinessType.INSERT)
     @PostMapping("/add")
     @ResponseBody
@@ -94,7 +90,6 @@ public class KbBoardController extends BaseController
     /**
      * 修改任务看板
      */
-    @RequiresRoles("admin")
     @GetMapping("/edit/{boardId}")
     public String edit(@PathVariable("boardId") Long boardId, ModelMap mmap)
     {
@@ -106,7 +101,6 @@ public class KbBoardController extends BaseController
     /**
      * 修改保存任务看板
      */
-    @RequiresRoles("admin")
     @Log(title = "任务看板", businessType = BusinessType.UPDATE)
     @PostMapping("/edit")
     @ResponseBody
@@ -124,7 +118,6 @@ public class KbBoardController extends BaseController
     /**
      * 删除任务看板
      */
-    @RequiresRoles("admin")
     @Log(title = "任务看板", businessType = BusinessType.DELETE)
     @PostMapping( "/remove")
     @ResponseBody
@@ -132,7 +125,7 @@ public class KbBoardController extends BaseController
     {
         return toAjax(kbBoardService.deleteKbBoardByBoardIds(ids));
     }
-    @RequiresRoles(value = {"admin", "common"}, logical = Logical.OR)
+
     @PostMapping("/list")
     @ResponseBody
     public TableDataInfo list(KbBoard kbBoard)
@@ -170,8 +163,5 @@ public class KbBoardController extends BaseController
         List<KbBoardMember> list = kbBoardMemberService.selectKbBoardMemberList(kbBoardMember);
         return getDataTable(list);
     }
-
-
-
 
 }

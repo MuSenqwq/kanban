@@ -7,9 +7,12 @@ import com.ruoyi.kanban.domain.KbBoard;
 import com.ruoyi.kanban.domain.KbList;
 import com.ruoyi.kanban.service.IKbBoardService;
 import com.ruoyi.kanban.service.IKbListService;
+import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.apache.shiro.subject.Subject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.*;
 import com.ruoyi.common.annotation.Log;
@@ -45,7 +48,7 @@ public class KbCardController extends BaseController
 
     // --- 标准CRUD接口 ---
 
-    @RequiresPermissions("kanban:card:view")
+
     @GetMapping()
     public String card()
     {
@@ -58,11 +61,12 @@ public class KbCardController extends BaseController
     public TableDataInfo list(KbCard kbCard)
     {
         startPage();
+        kbCard.setExecutorId(ShiroUtils.getUserId());
         List<KbCard> list = kbCardService.selectKbCardList(kbCard);
         return getDataTable(list);
     }
 
-    @RequiresPermissions("kanban:card:export")
+
     @Log(title = "任务卡片", businessType = BusinessType.EXPORT)
     @PostMapping("/export")
     @ResponseBody
@@ -103,7 +107,7 @@ public class KbCardController extends BaseController
         return AjaxResult.success(kbListService.selectKbListList(query));
     }
 
-    @RequiresPermissions("kanban:card:add")
+
     @Log(title = "任务卡片", businessType = BusinessType.INSERT)
     @PostMapping("/add")
     @ResponseBody
@@ -123,7 +127,7 @@ public class KbCardController extends BaseController
         return prefix + "/edit";
     }
 
-    @RequiresPermissions("kanban:card:edit")
+
     @Log(title = "任务卡片", businessType = BusinessType.UPDATE)
     @PostMapping("/edit")
     @ResponseBody
@@ -132,7 +136,7 @@ public class KbCardController extends BaseController
         return toAjax(kbCardService.updateKbCard(kbCard));
     }
 
-    @RequiresPermissions("kanban:card:remove")
+
     @Log(title = "任务卡片", businessType = BusinessType.DELETE)
     @PostMapping( "/remove")
     @ResponseBody
@@ -165,8 +169,12 @@ public class KbCardController extends BaseController
     }
 
     @GetMapping("/pool")
-    public String taskPool() { return prefix + "/pool"; }
-
+    public String pool(Model model) {
+        Subject subject = SecurityUtils.getSubject();
+        boolean isAdmin = subject.hasRole("admin");
+        model.addAttribute("isAdmin", isAdmin);
+        return prefix + "/pool";
+    }
     @PostMapping("/pool/list")
     @ResponseBody
     public TableDataInfo poolList() {

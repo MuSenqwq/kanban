@@ -32,4 +32,6 @@ public interface ISysUserMessageService
      * 发送任务类消息（快捷方法）
      */
     public int sendTaskMessage(Long toUserId, String title, String content);
+
+    int batchInsert(List<SysUserMessage> messageList);
 }

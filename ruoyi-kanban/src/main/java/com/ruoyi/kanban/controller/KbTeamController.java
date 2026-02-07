@@ -38,7 +38,7 @@ public class KbTeamController extends BaseController
     @Autowired
     private ISysUserService userService;
 
-    @RequiresPermissions("ruoyi-kanban:team:view")
+
     @GetMapping()
     public String team()
     {
@@ -48,7 +48,7 @@ public class KbTeamController extends BaseController
     /**
      * 查询团队信息列表
      */
-    @RequiresPermissions("ruoyi-kanban:team:list")
+
     @PostMapping("/list")
     @ResponseBody
     public TableDataInfo list(KbTeam kbTeam)
@@ -61,7 +61,7 @@ public class KbTeamController extends BaseController
     /**
      * 导出团队信息列表
      */
-    @RequiresPermissions("ruoyi-kanban:team:export")
+
     @Log(title = "团队信息", businessType = BusinessType.EXPORT)
     @PostMapping("/export")
     @ResponseBody
@@ -75,7 +75,7 @@ public class KbTeamController extends BaseController
     /**
      * 新增团队信息
      */
-    @RequiresPermissions("ruoyi-kanban:team:add")
+
     @GetMapping("/add")
     public String add(ModelMap mmap)
     {
@@ -87,7 +87,7 @@ public class KbTeamController extends BaseController
     /**
      * 新增保存团队信息
      */
-    @RequiresPermissions("ruoyi-kanban:team:add")
+
     @Log(title = "团队信息", businessType = BusinessType.INSERT)
     @PostMapping("/add")
     @ResponseBody
@@ -99,7 +99,7 @@ public class KbTeamController extends BaseController
     /**
      * 修改团队信息
      */
-    @RequiresPermissions("ruoyi-kanban:team:edit")
+
     @GetMapping("/edit/{teamId}")
     public String edit(@PathVariable("teamId") Long teamId, ModelMap mmap)
     {
@@ -115,7 +115,7 @@ public class KbTeamController extends BaseController
     /**
      * 修改保存团队信息
      */
-    @RequiresPermissions("ruoyi-kanban:team:edit")
+
     @Log(title = "团队信息", businessType = BusinessType.UPDATE)
     @PostMapping("/edit")
     @ResponseBody
@@ -127,7 +127,7 @@ public class KbTeamController extends BaseController
     /**
      * 删除团队信息
      */
-    @RequiresPermissions("ruoyi-kanban:team:remove")
+
     @Log(title = "团队信息", businessType = BusinessType.DELETE)
     @PostMapping( "/remove")
     @ResponseBody

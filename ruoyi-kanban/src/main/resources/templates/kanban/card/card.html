@@ -44,16 +44,16 @@
             </div>
 
             <div class="btn-group-sm" id="toolbar" role="group">
-                <a class="btn btn-success" onclick="$.operate.add()" shiro:hasPermission="kanban:card:add">
+                <a class="btn btn-success" onclick="$.operate.add()" shiro:hasRole="admin">
                     <i class="fa fa-plus"></i> 添加
                 </a>
-                <a class="btn btn-primary single disabled" onclick="$.operate.edit()" shiro:hasPermission="kanban:card:edit">
+                <a class="btn btn-primary single disabled" onclick="$.operate.edit()" shiro:hasRole="admin">
                     <i class="fa fa-edit"></i> 修改
                 </a>
-                <a class="btn btn-danger multiple disabled" onclick="$.operate.removeAll()" shiro:hasPermission="kanban:card:remove">
+                <a class="btn btn-danger multiple disabled" onclick="$.operate.removeAll()" shiro:hasRole="admin">
                     <i class="fa fa-remove"></i> 删除
                 </a>
-                <a class="btn btn-warning" onclick="$.table.exportExcel()" shiro:hasPermission="kanban:card:export">
+                <a class="btn btn-warning" onclick="$.table.exportExcel()" >
                     <i class="fa fa-download"></i> 导出
                 </a>
             </div>

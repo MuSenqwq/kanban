@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<html lang="zh" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.w3.org/1999/xhtml">
 <head>
   <th:block th:include="include :: header('任务看板')" />
   <style>
@@ -86,8 +86,9 @@
     </div>
     <div class="header-tools">
       <input type="text" id="filterInput" class="quick-search" placeholder="筛选任务..." onkeyup="filterCards()">
-      <button class="btn-tool" onclick="openInviteMember()"><i class="fa fa-user-plus"></i> 邀请成员</button>
-      <button class="btn-tool" onclick="openStats()"><i class="fa fa-pie-chart"></i> 数据分析</button>
+      <button class="btn-tool" onclick="openInviteMember()" shiro:hasRole="admin">
+        <i class="fa fa-user-plus"></i> 邀请成员
+      </button><button class="btn-tool" onclick="openStats()"><i class="fa fa-pie-chart"></i> 数据分析</button>
       <button class="btn-tool" onclick="refreshBoard()"><i class="fa fa-refresh"></i></button>
     </div>
   </div>

@@ -226,4 +226,5 @@ public class BaseController
     {
         return getSysUser().getLoginName();
     }
+
 }

@@ -1,83 +1,169 @@
 <!DOCTYPE html>
-<html lang="zh" xmlns:th="http://www.thymeleaf.org" >
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:include="include :: header('邀请成员')" />
-    <th:block th:include="include :: select2-css" />
+    <th:block th:include="include :: header('邀请看板成员')"/>
+    <th:block th:include="include :: select2-css"/>
+    <style>
+        /* 1. 提前定义样式，强制隐藏弹窗默认按钮栏 */
+        .layui-layer-btn {
+            display: none !important;
+        }
+        .select2-container {
+            width: 100% !important;
+        }
+        .radio-box {
+            display: inline-block;
+            margin-right: 20px;
+        }
+    </style>
 </head>
-<body class="white-bg">
-<div class="wrapper wrapper-content animated fadeInRight ibox-content">
-    <form class="form-horizontal m" id="form-member-add">
-        <input name="boardId" type="hidden" th:value="${boardId}" />
+<body class="gray-bg">
+<div class="container-div">
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="ibox float-e-margins">
+                <div class="ibox-title">
+                    <h5>邀请成员</h5>
+                </div>
+                <div class="ibox-content">
+                    <form class="form-horizontal m" id="form-member-add">
+                        <input name="boardId" type="hidden" th:value="${boardId}"/>
 
-        <div class="form-group">
-            <label class="col-sm-3 control-label is-required">选择用户：</label>
-            <div class="col-sm-8">
-                <select id="userId" name="userId" class="form-control select2-multiple" multiple>
-                    <option th:each="user : ${users}" th:value="${user.userId}" th:text="${user.userName} + ' (' + ${user.loginName} + ')'"></option>
-                </select>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label is-required">选择用户：</label>
+                            <div class="col-sm-8">
+                                <select id="userId" name="userId" class="form-control select2-multiple" multiple
+                                        placeholder="请选择要邀请的用户">
+                                    <option th:each="user : ${users}"
+                                            th:value="${user.userId}"
+                                            th:text="${user.userName} + ' (' + ${user.loginName} + ')'"></option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label is-required">成员角色：</label>
+                            <div class="col-sm-8">
+                                <div class="radio-box">
+                                    <input type="radio" id="role1" name="role" value="1" checked>
+                                    <label for="role1">普通成员</label>
+                                </div>
+                                <div class="radio-box">
+                                    <input type="radio" id="role2" name="role" value="0">
+                                    <label for="role2">看板管理员</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="col-sm-8 col-sm-offset-3">
+                                <button type="button" class="btn btn-primary" onclick="submitHandler()"><i class="fa fa-save"></i> 确认邀请</button>
+                                <button type="button" class="btn btn-default" onclick="$.modal.close()"><i class="fa fa-close"></i> 取消</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
-
-        <div class="form-group">
-            <label class="col-sm-3 control-label">角色：</label>
-            <div class="col-sm-8">
-                <div class="radio-box">
-                    <input type="radio" id="role1" name="role" value="1" checked>
-                    <label for="role1">普通成员</label>
-                </div>
-                <div class="radio-box">
-                    <input type="radio" id="role2" name="role" value="0">
-                    <label for="role2">管理员</label>
-                </div>
-            </div>
-        </div>
-    </form>
+    </div>
 </div>
-<th:block th:include="include :: footer" />
-<th:block th:include="include :: select2-js" />
-<script type="text/javascript">
+
+<th:block th:include="include :: footer"/>
+<th:block th:include="include :: select2-js"/>
+<script th:inline="javascript">
     var prefix = ctx + "kanban/board";
 
+    // 2. 页面加载后，主动查找并隐藏弹窗默认按钮（双重保险）
+    $(function () {
+        // 初始化Select2
+        $("#userId").select2({
+            placeholder: "请选择要邀请的用户",
+            allowClear: true,
+            language: "zh-CN",
+            width: "100%"
+        });
+
+        // 关键：自动找到弹窗的默认按钮栏并隐藏（不影响父页面）
+        setTimeout(function() {
+            // 方式1：找layui的默认按钮栏
+            var layerBtn = window.parent.$(".layui-layer-btn");
+            if (layerBtn.length > 0) {
+                layerBtn.hide();
+            }
+            // 方式2：兜底，找所有弹窗底部的默认按钮（兼容不同版本）
+            var defaultBtn = window.parent.$(".modal-footer").not("#form-member-add .modal-footer");
+            if (defaultBtn.length > 0) {
+                defaultBtn.hide();
+            }
+        }, 100); // 延迟100ms，确保弹窗DOM已渲染
+    });
+
     function submitHandler() {
-        if ($.validate.form()) {
-            var userIds = $.form.selectSelects("userId");
-            if(userIds == ""){
-                $.modal.alertWarning("请至少选择一个用户");
-                return;
-            }
-            // 这里为了简单，如果有多个用户，需要循环或者后端支持数组
-            // 演示单选或利用 split 在后端处理，或者循环调用。
-            // 这里我们假设后端暂只接受单个，或者前端循环提交。
-            // 为了更好的体验，我们修改一下逻辑：只取第一个选中的（如果后端insertKbBoardMember只接单个对象）
-            // 或者：修改前端逻辑循环提交。
-
-            var boardId = $("input[name='boardId']").val();
-            var role = $("input[name='role']:checked").val();
-            var users = $("#userId").val(); // array
-
-            if (!users || users.length == 0) {
-                $.modal.alertWarning("请选择用户");
-                return;
-            }
-
-            // 循环保存 (简单暴力)
-            var successCount = 0;
-            for(var i=0; i<users.length; i++){
-                var data = { "boardId": boardId, "userId": users[i], "role": role };
-                $.ajax({
-                    url: prefix + "/addMember",
-                    type: "post",
-                    data: data,
-                    async: false, // 同步以确保顺序
-                    success: function(res) {
-                        if(res.code == 0) successCount++;
-                    }
-                });
-            }
-            $.modal.msgSuccess("已尝试添加 " + users.length + " 位成员");
-            $.modal.close();
-            parent.refreshBoard(); // 刷新父页面
+        var boardId = $("input[name='boardId']").val();
+        var userIds = $("#userId").val() || [];
+        var role = $("input[name='role']:checked").val();
+        if (!boardId) {
+            $.modal.msgWarning("看板ID异常，请刷新页面重试！");
+            return;
         }
+        if (userIds.length === 0) {
+            $.modal.msgWarning("请至少选择一位要邀请的用户！");
+            return;
+        }
+        if (!role) {
+            $.modal.msgWarning("请选择成员角色！");
+            return;
+        }
+
+        var successCount = 0;
+        var failCount = 0;
+        var failMsg = "";
+        function inviteUser(userId) {
+            return new Promise(function(resolve) {
+                $.operate.post(
+                    prefix + "/addMember",
+                    { boardId: boardId, userId: userId, role: role },
+                    function(res) {
+                        if (res.code === 0) {
+                            successCount++;
+                            resolve(true);
+                        } else {
+                            failCount++;
+                            failMsg += "【" + userId + "】" + res.msg + "；";
+                            resolve(false);
+                        }
+                    },
+                    function() {
+                        failCount++;
+                        failMsg += "【" + userId + "】网络请求失败；";
+                        resolve(false);
+                    }
+                );
+            });
+        }
+        $.modal.loading("正在邀请成员，请稍候...");
+        var promiseList = [];
+        $.each(userIds, function(i, userId) {
+            promiseList.push(inviteUser(userId));
+        });
+        Promise.all(promiseList).then(function() {
+            $.modal.closeLoading();
+            if (successCount > 0) {
+                var msg = "成功邀请 " + successCount + " 位成员！";
+                if (failCount > 0) {
+                    msg += " 失败 " + failCount + " 位，原因：" + failMsg;
+                }
+                $.modal.msgSuccess(msg);
+                $.modal.close();
+                if (parent.refreshBoardMember) {
+                    parent.refreshBoardMember();
+                } else if (parent && parent.$ && parent.$.table && typeof parent.$.table.refresh === "function") {
+                    parent.$.table.refresh();
+                }
+            } else {
+                $.modal.msgError("邀请失败！所有成员均未邀请成功，原因：" + failMsg);
+            }
+        });
     }
 </script>
 </body>

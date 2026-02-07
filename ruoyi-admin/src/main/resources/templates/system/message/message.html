@@ -2,6 +2,23 @@
 <html lang="zh" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.pollix.at/thymeleaf/shiro">
 <head>
     <th:block th:include="include :: header('我的消息')" />
+    <!-- 引入select2样式（用于指定用户选择） -->
+    <th:block th:include="include :: select2-css"/>
+    <style>
+        /* 新增：修复select2下拉框超出弹窗问题 */
+        .select2-dropdown {
+            z-index: 9999 !important; /* 提高层级，避免被弹窗遮挡 */
+        }
+        /* 调整弹窗内form-group的间距，避免内容溢出 */
+        #form-publish-message .form-group {
+            margin-bottom: 15px;
+        }
+        /* 指定用户选择框容器适配 */
+        #userSelectDiv {
+            width: 100%;
+            box-sizing: border-box;
+        }
+    </style>
 </head>
 <body class="gray-bg">
 <div class="container-div">
@@ -28,16 +45,90 @@
         </div>
 
         <div class="btn-group-sm" id="toolbar" role="group">
+            <!-- 原有全部已读按钮 -->
             <a class="btn btn-success" onclick="markReadAll()">
                 <i class="fa fa-check"></i> 全部已读
             </a>
+            <!-- 新增：发布通知按钮（仅管理员可见） -->
+            <a class="btn btn-primary" onclick="openPublishMessage()" shiro:hasRole="admin">
+                <i class="fa fa-bullhorn"></i> 发布通知
+            </a>
         </div>
+
         <div class="col-sm-12 select-table table-striped">
             <table id="bootstrap-table"></table>
         </div>
     </div>
 </div>
+
+<!-- 新增：发布通知弹窗（调整宽度+布局，修复下拉框溢出） -->
+<div id="publishMessageModal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl"> <!-- 改为超大弹窗，避免内容溢出 -->
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">发布系统通知</h4>
+            </div>
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;"> <!-- 增加滚动，避免内容过高 -->
+                <form class="form-horizontal m" id="form-publish-message">
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label is-required">通知标题：</label>
+                        <div class="col-sm-9">
+                            <input type="text" name="title" class="form-control" placeholder="请输入通知标题" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label is-required">通知内容：</label>
+                        <div class="col-sm-9">
+                            <textarea name="content" class="form-control" rows="5" placeholder="请输入通知内容" required></textarea>
+                        </div>
+                    </div>
+                    <!-- 新增：消息类型下拉框 -->
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label is-required">消息类型：</label>
+                        <div class="col-sm-9">
+                            <select name="type" class="form-control" required>
+                                <option value="">请选择消息类型</option>
+                                <option value="1" selected>系统通知</option> <!-- 默认选中系统通知 -->
+                                <option value="2">任务通知</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">接收范围：</label>
+                        <div class="col-sm-9">
+                            <label class="radio-inline">
+                                <input type="radio" name="scope" value="all" checked> 所有用户
+                            </label>
+                            <label class="radio-inline">
+                                <input type="radio" name="scope" value="specified"> 指定用户
+                            </label>
+                            <!-- 指定用户选择框（默认隐藏，适配AssignUser数据） -->
+                            <div id="userSelectDiv" style="margin-top:10px; display:none;">
+                                <label class="control-label" style="display:block; margin-bottom:5px;">选择用户：</label>
+                                <select id="receiveUserIds" name="receiveUserIds" class="form-control select2-multiple" multiple
+                                        placeholder="请选择接收通知的用户">
+                                    <!-- 渲染AssignUser列表：value=userId，显示=userName -->
+                                    <option th:each="user : ${user}"
+                                            th:value="${user.userId}"
+                                            th:text="${user.userName}"></option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="submitPublish()">发布通知</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <th:block th:include="include :: footer" />
+<!-- 引入select2组件JS -->
+<th:block th:include="include :: select2-js"/>
 <script th:inline="javascript">
     var prefix = ctx + "system/message";
 
@@ -85,18 +176,108 @@
                 }]
         };
         $.table.init(options);
+
+        // 接收范围单选框切换事件（显示/隐藏指定用户选择框，修复select2挂载）
+        $("input[name='scope']").change(function() {
+            if ($(this).val() == 'specified') {
+                $("#userSelectDiv").show();
+                // 初始化select2组件：指定dropdownParent为弹窗，避免下拉框超出页面
+                $("#receiveUserIds").select2({
+                    placeholder: "请选择接收通知的用户",
+                    allowClear: true,
+                    language: "zh-CN",
+                    width: "100%",
+                    dropdownParent: $("#publishMessageModal") // 核心：下拉框挂载到弹窗内
+                });
+            } else {
+                $("#userSelectDiv").hide();
+                // 销毁select2，避免重复初始化
+                if ($("#receiveUserIds").data('select2')) {
+                    $("#receiveUserIds").select2('destroy');
+                }
+            }
+        });
     });
 
+    // 原有方法：标为已读
     function markRead(id) {
         $.operate.post(prefix + "/read", { "messageId": id }, function(){
             $.table.refresh();
         });
     }
 
+    // 原有方法：全部已读
     function markReadAll() {
         $.operate.post(prefix + "/readAll", {}, function(){
             $.table.refresh();
             $.modal.msgSuccess("所有消息已标记为已读");
+        });
+    }
+
+    // 新增：打开发布通知弹窗
+    function openPublishMessage() {
+        // 清空表单
+        $("#form-publish-message")[0].reset();
+        // 默认隐藏指定用户选择框
+        $("#userSelectDiv").hide();
+        // 销毁select2，避免残留
+        if ($("#receiveUserIds").data('select2')) {
+            $("#receiveUserIds").select2('destroy');
+        }
+        // 打开弹窗
+        $("#publishMessageModal").modal("show");
+    }
+
+    // 新增：提交发布通知（适配消息类型+默认未读）
+    function submitPublish() {
+        // 表单校验
+        var title = $("input[name='title']").val().trim();
+        var content = $("textarea[name='content']").val().trim();
+        var type = $("select[name='type']").val(); // 消息类型
+        var scope = $("input[name='scope']:checked").val();
+
+        if (!title) {
+            $.modal.msgWarning("请输入通知标题！");
+            return;
+        }
+        if (!content) {
+            $.modal.msgWarning("请输入通知内容！");
+            return;
+        }
+        if (!type) { // 校验消息类型
+            $.modal.msgWarning("请选择消息类型！");
+            return;
+        }
+        // 如果是指定用户，校验是否选择了用户
+        if (scope == 'specified') {
+            var userIds = $("#receiveUserIds").val() || [];
+            if (userIds.length == 0) {
+                $.modal.msgWarning("请选择接收通知的用户！");
+                return;
+            }
+        }
+
+        // 构造请求参数（无isRead，由后端默认赋值0）
+        var params = {
+            title: title,
+            content: content,
+            type: type, // 消息类型（1系统/2任务）
+            scope: scope
+        };
+        // 如果是指定用户，添加用户ID列表（逗号分隔）
+        if (scope == 'specified') {
+            params.receiveUserIds = $("#receiveUserIds").val().join(",");
+        }
+
+        // 提交发布请求
+        $.operate.post(prefix + "/publish", params, function(res) {
+            if (res.code === 0) {
+                $.modal.msgSuccess("通知发布成功！");
+                $("#publishMessageModal").modal("hide");
+                $.table.refresh(); // 刷新消息列表
+            } else {
+                $.modal.msgError("发布失败：" + res.msg);
+            }
         });
     }
 </script>

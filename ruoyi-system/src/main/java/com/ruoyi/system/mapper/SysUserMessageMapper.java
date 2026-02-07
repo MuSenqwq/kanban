@@ -27,4 +27,8 @@ public interface SysUserMessageMapper
      * 统计未读消息数
      */
     public int countUnreadMessages(Long userId);
+    /**
+     * 批量插入用户消息
+     */
+    int batchInsert(List<SysUserMessage> messageList);
 }

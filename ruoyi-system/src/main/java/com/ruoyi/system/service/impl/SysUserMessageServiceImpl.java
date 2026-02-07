@@ -1,13 +1,15 @@
 package com.ruoyi.system.service.impl;
 
 import java.util.List;
+
+import nl.basjes.parse.useragent.utils.springframework.util.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.system.mapper.SysUserMessageMapper;
 import com.ruoyi.system.domain.SysUserMessage;
 import com.ruoyi.system.service.ISysUserMessageService;
-
+import org.springframework.transaction.annotation.Transactional;
 /**
  * 用户消息Service业务层处理
  */
@@ -74,5 +76,13 @@ public class SysUserMessageServiceImpl implements ISysUserMessageService
         msg.setType("2"); // 2代表任务消息
         msg.setIsRead("0"); // 0代表未读
         return insertSysUserMessage(msg);
+    }
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int batchInsert(List<SysUserMessage> messageList) {
+        if (CollectionUtils.isEmpty(messageList)) {
+            return 0;
+        }
+        return sysUserMessageMapper.batchInsert(messageList);
     }
 }
