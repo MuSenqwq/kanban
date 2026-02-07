@@ -22,6 +22,8 @@ import com.ruoyi.common.utils.poi.ExcelUtil;
 import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.utils.ShiroUtils;
 
+
+
 /**
  * 任务卡片Controller
  */
@@ -39,6 +41,7 @@ public class KbCardController extends BaseController
 
     @Autowired
     private IKbListService kbListService;   // [新增]
+
 
     // --- 标准CRUD接口 ---
 
@@ -138,10 +141,13 @@ public class KbCardController extends BaseController
         return toAjax(kbCardService.deleteKbCardByCardIds(ids));
     }
 
+    /**
+     * 拖拽排序/跨列移动（保存目标列顺序 + 来源列顺序）
+     */
     @PostMapping("/changeOrder")
     @ResponseBody
-    public AjaxResult changeOrder(Long cardId, Long listId, String sortOrder) {
-        return toAjax(kbCardService.changeCardOrder(cardId, listId, sortOrder));
+    public AjaxResult changeOrder(Long cardId, Long listId, String sortOrder, Long fromListId, String fromSortOrder) {
+        return toAjax(kbCardService.changeCardOrder(cardId, listId, sortOrder, fromListId, fromSortOrder));
     }
 
     // --- 业务接口 ---
@@ -181,22 +187,18 @@ public class KbCardController extends BaseController
         return toAjax(kbCardService.completeTask(cardId));
     }
 
-    /**
-     * 查询当前任务所在看板的“可指派成员”
-     */
+    // 查询所有可指派的用户列表
     @GetMapping("/assignUser")
     @ResponseBody
-    public AjaxResult listUser(@RequestParam(name = "cardId") Long cardId) {
-        List<AssignUser> users = kbCardService.selectAssignableUsers(cardId, ShiroUtils.getUserId());
+    public AjaxResult listUser(@RequestParam(name = "cardId")String cardId) {
+        System.out.println("=====请求到达/assignUser，cardId：" + cardId + "====");
+        List<AssignUser> users = kbCardService.selectAllAssignUser();
         return AjaxResult.success("查询可指派用户成功", users).put("cardId", cardId);
     }
 
-    /**
-     * 指派执行人（仅看板管理员/看板创建者/系统管理员可操作）
-     */
     @PostMapping("/assign")
     @ResponseBody
     public AjaxResult assign(@RequestParam Long cardId, @RequestParam Long executorId) {
-        return toAjax(kbCardService.assignTask(cardId, executorId, ShiroUtils.getUserId()));
+        return toAjax(kbCardService.claimTask(cardId, executorId));
     }
 }

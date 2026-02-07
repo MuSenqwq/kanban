@@ -207,21 +207,45 @@
         },
         onEnd: function (evt) {
           var itemEl = evt.item;
+
           var toListId = evt.to.getAttribute('data-list-id');
-          var newOrderIds = Array.from(evt.to.children).map(function(card) { return card.getAttribute('data-card-id'); }).join(',');
+          var fromListId = evt.from.getAttribute('data-list-id');
+
+          // 目标列排序
+          var toOrderIds = Array.from(evt.to.children).map(function(card) {
+            return card.getAttribute('data-card-id');
+          }).join(',');
+
+          // 来源列排序（跨列时才有意义；同列拖拽也传一份，后端会自动处理）
+          var fromOrderIds = Array.from(evt.from.children).map(function(card) {
+            return card.getAttribute('data-card-id');
+          }).join(',');
 
           updateListCount(evt.to);
           if (evt.to !== evt.from) updateListCount(evt.from);
 
           $.ajax({
-            url: cardPrefix + "/changeOrder", type: "post", dataType: "json",
-            data: { "cardId": itemEl.getAttribute('data-card-id'), "listId": toListId, "sortOrder": newOrderIds },
+            url: cardPrefix + "/changeOrder",
+            type: "post",
+            dataType: "json",
+            data: {
+              "cardId": itemEl.getAttribute('data-card-id'),
+              "listId": toListId,
+              "sortOrder": toOrderIds,
+              "fromListId": fromListId,
+              "fromSortOrder": fromOrderIds
+            },
             success: function(res) {
               if (res.code !== 0) {
                 $.modal.msgError(res.msg);
                 refreshBoard();
               }
               // 操作结束后重启刷新
+              startAutoRefresh();
+            },
+            error: function() {
+              $.modal.msgError("拖拽保存失败");
+              refreshBoard();
               startAutoRefresh();
             }
           })

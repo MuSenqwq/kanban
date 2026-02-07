@@ -60,6 +60,7 @@
             <if test="progress != null">progress,</if>
             <if test="executorId != null">executor_id,</if>
             <if test="isExcellent != null">is_excellent,</if>
+            <if test="finishTime != null">finish_time,</if>
             <if test="createBy != null">create_by,</if>
             <if test="createTime != null">create_time,</if>
             <if test="updateBy != null">update_by,</if>
@@ -77,8 +78,11 @@
             <if test="progress != null">#{progress},</if>
             <if test="executorId != null">#{executorId},</if>
             <if test="isExcellent != null">#{isExcellent},</if>
+            <if test="finishTime != null">#{finishTime},</if>
             <if test="createBy != null">#{createBy},</if>
             <if test="createTime != null">#{createTime},</if>
+            <if test="updateBy != null">#{updateBy},</if>
+            <if test="updateTime != null">#{updateTime},</if>
         </trim>
     </insert>
 
@@ -94,11 +98,13 @@
             <if test="orderNum != null">order_num = #{orderNum},</if>
             <if test="status != null">status = #{status},</if>
             <if test="progress != null">progress = #{progress},</if>
+            <if test="executorId != null">executor_id = #{executorId},</if>
+            <if test="isExcellent != null">is_excellent = #{isExcellent},</if>
+            <if test="finishTime != null">finish_time = #{finishTime},</if>
             <if test="createBy != null">create_by = #{createBy},</if>
             <if test="createTime != null">create_time = #{createTime},</if>
             <if test="updateBy != null">update_by = #{updateBy},</if>
             <if test="updateTime != null">update_time = #{updateTime},</if>
-            <if test="executorId != null">executor_id = #{executorId},</if>
         </trim>
         where card_id = #{cardId}
     </update>
@@ -168,17 +174,12 @@
         order by create_time desc
     </select>
 
-    <!-- ✅ 新增：只返回该任务所在看板的成员（用于指派弹窗） -->
-    <select id="selectAssignableUsersByCardId" parameterType="Long" resultType="com.ruoyi.kanban.domain.AssignUser">
-        SELECT
-            u.user_id AS userId,
-            u.user_name AS userName
-        FROM kb_card c
-                 JOIN kb_board_member m ON c.board_id = m.board_id
-                 JOIN sys_user u ON m.user_id = u.user_id
-        WHERE c.card_id = #{cardId}
-          AND u.status = '0'
-        ORDER BY u.create_time DESC
+    <!-- [新增] 查询某列下卡片ID（用于服务端兜底重排） -->
+    <select id="selectCardIdsByListId" parameterType="Long" resultType="Long">
+        select card_id
+        from kb_card
+        where list_id = #{listId}
+        order by order_num asc, card_id asc
     </select>
 
 </mapper>

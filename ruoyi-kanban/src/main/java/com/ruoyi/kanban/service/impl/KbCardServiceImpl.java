@@ -3,19 +3,21 @@ package com.ruoyi.kanban.service.impl;
 import java.util.List;
 
 import com.ruoyi.common.exception.ServiceException;
+import com.ruoyi.common.core.domain.entity.SysUser;
+import com.ruoyi.common.core.text.Convert;
 import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.ShiroUtils;
 import com.ruoyi.common.utils.StringUtils;
-import com.ruoyi.common.core.domain.entity.SysUser;
-import com.ruoyi.common.core.text.Convert;
 import com.ruoyi.kanban.domain.AssignUser;
 import com.ruoyi.kanban.domain.KbBoard;
 import com.ruoyi.kanban.domain.KbBoardMember;
 import com.ruoyi.kanban.domain.KbCard;
+import com.ruoyi.kanban.domain.KbList;
 import com.ruoyi.kanban.mapper.KbBoardMapper;
 import com.ruoyi.kanban.mapper.KbBoardMemberMapper;
 import com.ruoyi.kanban.mapper.KbCardMapper;
 import com.ruoyi.kanban.service.IKbCardService;
+import com.ruoyi.kanban.service.IKbListService;
 import com.ruoyi.system.service.ISysUserMessageService;
 import com.ruoyi.system.service.ISysUserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,10 +40,13 @@ public class KbCardServiceImpl implements IKbCardService
     private KbBoardMemberMapper kbBoardMemberMapper;
 
     @Autowired
-    private ISysUserMessageService messageService; // 消息服务
+    private IKbListService kbListService;
 
     @Autowired
-    private ISysUserService userService; // 用户服务
+    private ISysUserMessageService messageService;
+
+    @Autowired
+    private ISysUserService userService;
 
     @Override
     public KbCard selectKbCardByCardId(Long cardId) {
@@ -54,14 +59,14 @@ public class KbCardServiceImpl implements IKbCardService
     }
 
     /**
-     * 新增任务卡片（包含指派通知：若创建时就有 executorId）
+     * 新增任务卡片（包含指派通知）
      */
     @Override
     public int insertKbCard(KbCard kbCard) {
         kbCard.setCreateTime(DateUtils.getNowDate());
         int rows = kbCardMapper.insertKbCard(kbCard);
 
-        // 如果创建时指定了执行人，给执行人发消息
+        // 创建时指定执行人：通知执行人
         if (rows > 0 && kbCard.getExecutorId() != null) {
             messageService.sendTaskMessage(
                     kbCard.getExecutorId(),
@@ -88,27 +93,162 @@ public class KbCardServiceImpl implements IKbCardService
         return kbCardMapper.deleteKbCardByCardId(cardId);
     }
 
+    /**
+     * 拖拽排序 / 跨列移动（保存目标列顺序 + 来源列顺序）
+     */
     @Override
     @Transactional
-    public int changeCardOrder(Long cardId, Long listId, String sortOrder) {
-        KbCard currentCard = new KbCard();
-        currentCard.setCardId(cardId);
-        currentCard.setListId(listId);
-        currentCard.setUpdateTime(DateUtils.getNowDate());
-        kbCardMapper.updateKbCard(currentCard);
+    public int changeCardOrder(Long cardId, Long listId, String sortOrder, Long fromListId, String fromSortOrder) {
 
-        if (StringUtils.isNotEmpty(sortOrder)) {
-            String[] cardIds = Convert.toStrArray(sortOrder);
-            for (int i = 0; i < cardIds.length; i++) {
-                if (StringUtils.isNotEmpty(cardIds[i])) {
-                    KbCard c = new KbCard();
-                    c.setCardId(Long.valueOf(cardIds[i]));
-                    c.setOrderNum((long) i);
-                    kbCardMapper.updateKbCard(c);
-                }
+        if (cardId == null || listId == null) {
+            throw new ServiceException("参数错误：cardId/listId不能为空");
+        }
+
+        KbCard dbCard = kbCardMapper.selectKbCardByCardId(cardId);
+        if (dbCard == null) {
+            throw new ServiceException("任务不存在");
+        }
+
+        // 归档不允许拖拽
+        if ("2".equals(dbCard.getStatus())) {
+            throw new ServiceException("已归档任务无法拖拽");
+        }
+
+        // 权限校验：系统管理员 / 看板负责人 / 看板成员
+        Long userId = ShiroUtils.getUserId();
+        checkBoardPermission(dbCard.getBoardId(), userId);
+
+        Long oldListId = dbCard.getListId();
+        boolean listChanged = oldListId != null && !oldListId.equals(listId);
+
+        // 1) 更新被拖拽卡片归属列
+        KbCard moved = new KbCard();
+        moved.setCardId(cardId);
+        moved.setListId(listId);
+        moved.setUpdateBy(ShiroUtils.getLoginName());
+        moved.setUpdateTime(DateUtils.getNowDate());
+
+        // [可选] 拖到“完成”列自动完成
+        KbList targetList = kbListService.selectKbListByListId(listId);
+        if (targetList != null && isDoneListName(targetList.getListName())) {
+            moved.setStatus("1");
+            moved.setProgress(100);
+            moved.setFinishTime(DateUtils.getNowDate());
+        }
+
+        kbCardMapper.updateKbCard(moved);
+
+        // 2) 目标列按 sortOrder 重排
+        applyListOrder(listId, sortOrder);
+
+        // 3) 跨列：来源列也要重排
+        if (listChanged) {
+            if (fromListId != null && fromListId.equals(oldListId) && StringUtils.isNotEmpty(fromSortOrder)) {
+                applyListOrder(oldListId, fromSortOrder);
+            } else {
+                normalizeListOrder(oldListId);
             }
         }
+
         return 1;
+    }
+
+    /**
+     * ✅ 修复点：你项目的 SysUser.isAdmin() 是无参方法，所以这里改为实例判断
+     */
+    private void checkBoardPermission(Long boardId, Long userId) {
+        if (boardId == null) {
+            throw new ServiceException("任务数据异常：boardId为空");
+        }
+        if (userId == null) {
+            throw new ServiceException("未登录");
+        }
+
+        // 系统管理员（兼容不同RuoYi版本）
+        if (isSuperAdmin(userId)) {
+            return;
+        }
+
+        // 看板负责人（创建者）
+        KbBoard board = kbBoardMapper.selectKbBoardByBoardId(boardId);
+        if (board != null && board.getUserId() != null && board.getUserId().equals(userId)) {
+            return;
+        }
+
+        // 看板成员
+        KbBoardMember query = new KbBoardMember();
+        query.setBoardId(boardId);
+        query.setUserId(userId);
+        List<KbBoardMember> members = kbBoardMemberMapper.selectKbBoardMemberList(query);
+        if (members != null && !members.isEmpty()) {
+            return;
+        }
+
+        throw new ServiceException("无权限操作该看板任务");
+    }
+
+    /**
+     * 兼容：不同RuoYi版本 admin 判断方式不一样
+     */
+    private boolean isSuperAdmin(Long userId) {
+        try {
+            SysUser u = ShiroUtils.getSysUser();
+            if (u != null) {
+                // 你这个版本：isAdmin() 无参
+                return u.isAdmin();
+            }
+        } catch (Exception ignored) {
+        }
+        // 兜底：RuoYi 常见超管 userId=1
+        return userId != null && userId.longValue() == 1L;
+    }
+
+    /**
+     * 按前端传入顺序重排（同时修正 list_id）
+     */
+    private void applyListOrder(Long listId, String orderStr) {
+        if (listId == null) return;
+
+        if (StringUtils.isNotEmpty(orderStr)) {
+            String[] cardIds = Convert.toStrArray(orderStr);
+            long idx = 0L;
+            for (String cid : cardIds) {
+                if (StringUtils.isEmpty(cid)) continue;
+                KbCard c = new KbCard();
+                c.setCardId(Long.valueOf(cid));
+                c.setListId(listId);
+                c.setOrderNum(idx++);
+                c.setUpdateTime(DateUtils.getNowDate());
+                kbCardMapper.updateKbCard(c);
+            }
+        } else {
+            normalizeListOrder(listId);
+        }
+    }
+
+    /**
+     * 从DB读取当前列卡片并重排 order_num
+     */
+    private void normalizeListOrder(Long listId) {
+        if (listId == null) return;
+        List<Long> ids = kbCardMapper.selectCardIdsByListId(listId);
+        if (ids == null) return;
+
+        long idx = 0L;
+        for (Long id : ids) {
+            if (id == null) continue;
+            KbCard c = new KbCard();
+            c.setCardId(id);
+            c.setOrderNum(idx++);
+            c.setUpdateTime(DateUtils.getNowDate());
+            kbCardMapper.updateKbCard(c);
+        }
+    }
+
+    private boolean isDoneListName(String listName) {
+        if (StringUtils.isEmpty(listName)) return false;
+        String n = listName.trim();
+        return n.contains("完成") || n.equalsIgnoreCase("done") || n.equalsIgnoreCase("completed");
     }
 
     @Override
@@ -117,7 +257,7 @@ public class KbCardServiceImpl implements IKbCardService
     }
 
     /**
-     * 认领任务（防并发锁 + 权限校验 + 认领通知）
+     * 认领任务（防并发锁 + 认领通知）
      */
     @Override
     @Transactional
@@ -126,23 +266,18 @@ public class KbCardServiceImpl implements IKbCardService
         if (card == null) {
             throw new ServiceException("任务不存在");
         }
-
-        // 权限校验：必须是该任务所在看板成员/看板创建者/任务创建者/系统管理员
-        checkCardOperatePermission(card, userId);
-
         if (card.getExecutorId() != null && card.getExecutorId() > 0) {
             throw new ServiceException("手慢了！该任务已被认领/指派");
         }
 
         card.setExecutorId(userId);
-        card.setStatus("0"); // 自动变更为进行中
+        card.setStatus("0");
         card.setUpdateTime(DateUtils.getNowDate());
         int rows = kbCardMapper.updateKbCard(card);
 
-        // 认领成功后，通知任务创建者
+        // 通知创建者：任务被认领
         if (rows > 0 && StringUtils.isNotEmpty(card.getCreateBy())) {
             SysUser creator = userService.selectUserByLoginName(card.getCreateBy());
-            // 如果创建者存在，且不是自己认领自己的任务
             if (creator != null && !creator.getUserId().equals(userId)) {
                 messageService.sendTaskMessage(
                         creator.getUserId(),
@@ -155,69 +290,22 @@ public class KbCardServiceImpl implements IKbCardService
     }
 
     /**
-     * 指派任务（防并发锁 + 权限校验 + 指派通知发给执行人）
-     */
-    @Override
-    @Transactional
-    public synchronized int assignTask(Long cardId, Long executorId, Long operatorId) {
-        if (executorId == null || executorId <= 0) {
-            throw new ServiceException("请选择有效的执行人");
-        }
-
-        KbCard card = kbCardMapper.selectKbCardByCardId(cardId);
-        if (card == null) {
-            throw new ServiceException("任务不存在");
-        }
-
-        // 权限校验：只有看板管理员/看板创建者/系统管理员可指派
-        checkBoardAdminPermission(card.getBoardId(), operatorId);
-
-        // 只能指派“未分配”的任务（任务池逻辑）
-        if (card.getExecutorId() != null && card.getExecutorId() > 0) {
-            throw new ServiceException("该任务已被认领/指派，无法重复指派");
-        }
-
-        // 校验执行人必须是该看板成员（或系统管理员）
-        if (!isBoardMemberOrOwner(card.getBoardId(), executorId) && !ShiroUtils.isAdmin(executorId)) {
-            throw new ServiceException("该用户不是看板成员，无法指派");
-        }
-
-        card.setExecutorId(executorId);
-        card.setStatus("0");
-        card.setUpdateTime(DateUtils.getNowDate());
-        int rows = kbCardMapper.updateKbCard(card);
-
-        // 指派成功后，通知执行人（不是自己指派给自己才发）
-        if (rows > 0 && !executorId.equals(operatorId)) {
-            messageService.sendTaskMessage(
-                    executorId,
-                    "任务指派通知",
-                    "您被指派了任务：[" + card.getCardTitle() + "]"
-            );
-        }
-        return rows;
-    }
-
-    /**
-     * 一键完成任务（包含完成通知）
+     * 完成任务（包含完成通知）
      */
     @Override
     public int completeTask(Long cardId) {
-        // 先查出来获取信息用于通知
         KbCard existCard = kbCardMapper.selectKbCardByCardId(cardId);
 
         KbCard card = new KbCard();
         card.setCardId(cardId);
-        card.setStatus("1"); // 1=已完成
+        card.setStatus("1");
         card.setProgress(100);
         card.setFinishTime(DateUtils.getNowDate());
         card.setUpdateTime(DateUtils.getNowDate());
         int rows = kbCardMapper.updateKbCard(card);
 
-        // 完成通知 (通知创建者)
         if (rows > 0 && existCard != null && StringUtils.isNotEmpty(existCard.getCreateBy())) {
             SysUser creator = userService.selectUserByLoginName(existCard.getCreateBy());
-            // 如果执行人不是创建者，通知创建者
             if (creator != null && (existCard.getExecutorId() == null || !creator.getUserId().equals(existCard.getExecutorId()))) {
                 messageService.sendTaskMessage(
                         creator.getUserId(),
@@ -229,112 +317,8 @@ public class KbCardServiceImpl implements IKbCardService
         return rows;
     }
 
-    /**
-     * 查询当前任务所在看板的可指派成员（带权限校验：至少得能操作该任务）
-     */
-    @Override
-    public List<AssignUser> selectAssignableUsers(Long cardId, Long operatorId) {
-        KbCard card = kbCardMapper.selectKbCardByCardId(cardId);
-        if (card == null) {
-            throw new ServiceException("任务不存在");
-        }
-        // 至少是看板成员/创建者/系统管理员才能看到可指派成员
-        checkCardOperatePermission(card, operatorId);
-        return kbCardMapper.selectAssignableUsersByCardId(cardId);
-    }
-
-    /**
-     * 兼容保留：全量用户
-     */
     @Override
     public List<AssignUser> selectAllAssignUser() {
         return kbCardMapper.selectAllAssignUser();
-    }
-
-    // =========================
-    // 权限校验工具方法
-    // =========================
-
-    /**
-     * 任务操作权限：系统管理员 / 看板创建者 / 看板成员 / 任务创建者
-     */
-    private void checkCardOperatePermission(KbCard card, Long userId) {
-        if (userId == null) {
-            throw new ServiceException("未登录");
-        }
-        if (ShiroUtils.isAdmin(userId)) {
-            return;
-        }
-        if (card.getBoardId() == null) {
-            throw new ServiceException("任务数据异常：缺少boardId");
-        }
-
-        // 看板创建者
-        KbBoard board = kbBoardMapper.selectKbBoardByBoardId(card.getBoardId());
-        if (board != null && userId.equals(board.getUserId())) {
-            return;
-        }
-
-        // 看板成员
-        if (isBoardMember(card.getBoardId(), userId)) {
-            return;
-        }
-
-        // 任务创建者（createBy=loginName）
-        if (StringUtils.isNotEmpty(card.getCreateBy())) {
-            SysUser creator = userService.selectUserByLoginName(card.getCreateBy());
-            if (creator != null && userId.equals(creator.getUserId())) {
-                return;
-            }
-        }
-
-        throw new ServiceException("无权限操作该任务");
-    }
-
-    /**
-     * 指派权限：系统管理员 / 看板创建者 / 看板成员(role=0 看板管理员)
-     */
-    private void checkBoardAdminPermission(Long boardId, Long operatorId) {
-        if (operatorId == null) {
-            throw new ServiceException("未登录");
-        }
-        if (ShiroUtils.isAdmin(operatorId)) {
-            return;
-        }
-        if (boardId == null) {
-            throw new ServiceException("看板不存在/数据异常");
-        }
-
-        KbBoard board = kbBoardMapper.selectKbBoardByBoardId(boardId);
-        if (board != null && operatorId.equals(board.getUserId())) {
-            return;
-        }
-
-        // role=0 表示看板管理员
-        KbBoardMember q = new KbBoardMember();
-        q.setBoardId(boardId);
-        q.setUserId(operatorId);
-        q.setRole("0");
-        List<KbBoardMember> admins = kbBoardMemberMapper.selectKbBoardMemberList(q);
-        if (admins != null && !admins.isEmpty()) {
-            return;
-        }
-
-        throw new ServiceException("无权限指派：仅看板管理员可操作");
-    }
-
-    private boolean isBoardMember(Long boardId, Long userId) {
-        KbBoardMember q = new KbBoardMember();
-        q.setBoardId(boardId);
-        q.setUserId(userId);
-        List<KbBoardMember> list = kbBoardMemberMapper.selectKbBoardMemberList(q);
-        return list != null && !list.isEmpty();
-    }
-
-    private boolean isBoardMemberOrOwner(Long boardId, Long userId) {
-        if (boardId == null || userId == null) return false;
-        KbBoard board = kbBoardMapper.selectKbBoardByBoardId(boardId);
-        if (board != null && userId.equals(board.getUserId())) return true;
-        return isBoardMember(boardId, userId);
     }
 }
