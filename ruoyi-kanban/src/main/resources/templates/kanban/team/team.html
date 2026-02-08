@@ -1,106 +1,191 @@
 <!DOCTYPE html>
 <html lang="zh" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.pollix.at/thymeleaf/shiro">
 <head>
-    <th:block th:include="include :: header('团队信息列表')" />
+    <th:block th:include="include :: header('团队管理')" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body { background: #f4f5f7; padding: 20px; font-family: -apple-system, sans-serif; color: #172b4d; }
+
+        .toolbar-container {
+            background: #fff; padding: 18px 25px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;
+        }
+        .page-title { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+        .page-title i { color: #0079bf; }
+
+        .search-area { display: flex; gap: 15px; }
+        .search-input {
+            padding: 8px 15px 8px 30px; border: 1px solid #dfe1e6; border-radius: 6px; width: 260px;
+            background: #fafbfc; transition: all 0.2s;
+        }
+        .search-input:focus { background-color: #fff; border-color: #0079bf; outline: none; }
+
+        .btn-new { background: #0079bf; color: #fff; border: none; padding: 8px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-new:hover { background: #005a8e; transform: translateY(-1px); }
+
+        .team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+
+        .team-card {
+            background: #fff; border-radius: 12px; overflow: hidden; position: relative;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.3s; border: 1px solid #f0f0f0;
+            display: flex; flex-direction: column;
+        }
+        .team-card:hover { transform: translateY(-5px); box-shadow: 0 12px 20px rgba(0,0,0,0.08); }
+
+        .card-header-color { height: 60px; background: linear-gradient(120deg, #e6fcff 0%, #deebff 100%); position: relative; }
+
+        .team-avatar {
+            width: 56px; height: 56px; background: #fff; color: #0079bf; border-radius: 12px;
+            position: absolute; bottom: -28px; left: 50%; transform: translateX(-50%);
+            display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.06);
+        }
+
+        .card-body { padding: 35px 20px 20px; text-align: center; flex: 1; }
+        .team-name { font-size: 16px; font-weight: 700; margin-bottom: 5px; color: #172b4d; }
+        .team-info { font-size: 12px; color: #6b778c; margin-bottom: 15px; }
+
+        .leader-pill { display: inline-block; background: #f4f5f7; padding: 4px 10px; border-radius: 12px; font-size: 12px; color: #42526e; font-weight: 500; }
+
+        .card-footer { border-top: 1px solid #f4f5f7; display: flex; }
+        .card-btn {
+            flex: 1; padding: 12px; text-align: center; font-size: 13px; cursor: pointer; color: #5e6c84;
+            transition: all 0.2s; background: #fafbfc;
+        }
+        .card-btn:hover { background: #fff; color: #0079bf; }
+        .card-btn.delete:hover { color: #de350b; background: #fff5f5; }
+        .v-divider { width: 1px; background: #eee; }
+    </style>
 </head>
 <body class="gray-bg">
-     <div class="container-div">
-        <div class="row">
-            <div class="col-sm-12 search-collapse">
-                <form id="formId">
-                    <div class="select-list">
-                        <ul>
-                            <li>
-                                <label>团队名称：</label>
-                                <input type="text" name="teamName"/>
-                            </li>
-                            <li>
-                                <label>负责人ID：</label>
-                                <input type="text" name="ownerId"/>
-                            </li>
-                            <li>
-                                <a class="btn btn-primary btn-rounded btn-sm" onclick="$.table.search()"><i class="fa fa-search"></i>&nbsp;搜索</a>
-                                <a class="btn btn-warning btn-rounded btn-sm" onclick="$.form.reset()"><i class="fa fa-refresh"></i>&nbsp;重置</a>
-                            </li>
-                        </ul>
-                    </div>
-                </form>
-            </div>
 
-            <div class="btn-group-sm" id="toolbar" role="group">
-                <a class="btn btn-success" onclick="$.operate.add()" shiro:hasPermission="ruoyi-kanban:team:add">
-                    <i class="fa fa-plus"></i> 添加
-                </a>
-                <a class="btn btn-primary single disabled" onclick="$.operate.edit()" shiro:hasPermission="ruoyi-kanban:team:edit">
-                    <i class="fa fa-edit"></i> 修改
-                </a>
-                <a class="btn btn-danger multiple disabled" onclick="$.operate.removeAll()" shiro:hasPermission="ruoyi-kanban:team:remove">
-                    <i class="fa fa-remove"></i> 删除
-                </a>
-                <a class="btn btn-warning" onclick="$.table.exportExcel()" shiro:hasPermission="ruoyi-kanban:team:export">
-                    <i class="fa fa-download"></i> 导出
-                </a>
-            </div>
-            <div class="col-sm-12 select-table table-striped">
-                <table id="bootstrap-table"></table>
-            </div>
-        </div>
+<div class="toolbar-container">
+    <div class="page-title"><i class="fa fa-users"></i> 团队管理</div>
+    <div class="search-area">
+        <input type="text" id="keyword" class="search-input" placeholder="搜索团队名称..." onkeyup="loadTeamList()">
+        <button class="btn-new" onclick="openAddTeam()"><i class="fa fa-plus"></i> 新建团队</button>
     </div>
-    <th:block th:include="include :: footer" />
-    <script th:inline="javascript">
-        var editFlag = [[${@permission.hasPermi('ruoyi-kanban:team:edit')}]];
-        var removeFlag = [[${@permission.hasPermi('ruoyi-kanban:team:remove')}]];
-        var prefix = ctx + "ruoyi-kanban/team";
+</div>
 
-        $(function() {
-            var options = {
-                url: prefix + "/list",
-                createUrl: prefix + "/add",
-                updateUrl: prefix + "/edit/{id}",
-                removeUrl: prefix + "/remove",
-                exportUrl: prefix + "/export",
-                modalName: "团队信息",
-                columns: [{
-                    checkbox: true
-                },
-                {
-                    field: 'teamId',
-                    title: '团队ID',
-                    visible: false
-                },
-                {
-                    field: 'teamName',
-                    title: '团队名称'
-                },
-                {
-                    field: 'description',
-                    title: '团队描述'
-                },
-                {
-                    field: 'ownerId',
-                    title: '负责人ID'
-                },
-                {
-                    field: 'status',
-                    title: '状态'
-                },
-                {
-                    field: 'remark',
-                    title: '备注'
-                },
-                {
-                    title: '操作',
-                    align: 'center',
-                    formatter: function(value, row, index) {
-                        var actions = [];
-                        actions.push('<a class="btn btn-success btn-xs ' + editFlag + '" href="javascript:void(0)" onclick="$.operate.edit(\'' + row.teamId + '\')"><i class="fa fa-edit"></i>编辑</a> ');
-                        actions.push('<a class="btn btn-danger btn-xs ' + removeFlag + '" href="javascript:void(0)" onclick="$.operate.remove(\'' + row.teamId + '\')"><i class="fa fa-remove"></i>删除</a>');
-                        return actions.join('');
-                    }
-                }]
-            };
-            $.table.init(options);
+<div id="loading" style="text-align:center; padding:40px; color:#999; display:none;">
+    <i class="fa fa-spinner fa-spin fa-2x"></i>
+</div>
+
+<div class="team-grid" id="teamContainer">
+</div>
+
+<th:block th:include="include :: footer" />
+<script th:inline="javascript">
+    var prefix = ctx + "ruoyi-kanban/team";
+
+    $(function() {
+        loadTeamList();
+    });
+
+    window.loadTeamList = function() {
+        var keyword = $("#keyword").val();
+        $("#loading").show();
+        $("#teamContainer").hide();
+
+        $.ajax({
+            url: prefix + "/list",
+            type: "POST",
+            data: { teamName: keyword },
+            success: function(res) {
+                $("#loading").hide();
+                $("#teamContainer").show();
+
+                if (res.code === 0) {
+                    renderCards(res.rows);
+                } else {
+                    $("#teamContainer").html('<div style="text-align:center;width:100%">❌ ' + res.msg + '</div>');
+                }
+            },
+            error: function(xhr) {
+                $("#loading").hide();
+                $("#teamContainer").show().html('<div style="text-align:center;color:red;padding:30px;">请求失败，请检查后端服务</div>');
+            }
         });
-    </script>
+    }
+
+    function renderCards(rows) {
+        if (!rows || rows.length === 0) {
+            $("#teamContainer").html('<div style="grid-column: 1/-1; text-align:center; padding:50px; color:#999;">没有找到团队数据</div>');
+            return;
+        }
+
+        var html = rows.map(function(row) {
+            var letter = row.teamName ? row.teamName.substring(0, 1).toUpperCase() : 'T';
+            var date = row.createTime ? row.createTime.substring(0, 10) : '-';
+
+            // 修复：使用 ownerId (如果后端关联了User表返回userName最好，否则显示ID)
+            var leader = row.ownerId ? row.ownerId : '暂无';
+
+            return `
+            <div class="team-card">
+                <div class="card-header-color">
+                    <div class="team-avatar">${letter}</div>
+                </div>
+                <div class="card-body">
+                    <div class="team-name" title="${row.teamName}">${row.teamName}</div>
+                    <div class="team-info">创建于 ${date}</div>
+                    <div class="leader-pill"><i class="fa fa-user"></i> 负责人ID: ${leader}</div>
+                </div>
+                <div class="card-footer">
+                    <div class="card-btn" onclick="openEditTeam('${row.teamId}')"><i class="fa fa-edit"></i> 编辑</div>
+                    <div class="v-divider"></div>
+                    <div class="card-btn delete" onclick="deleteTeam('${row.teamId}')"><i class="fa fa-trash"></i> 删除</div>
+                </div>
+            </div>
+            `;
+        }).join('');
+
+        $("#teamContainer").html(html);
+    }
+
+    function openAddTeam() {
+        layer.open({
+            type: 2,
+            title: '新建团队',
+            shadeClose: true,
+            area: ['550px', '450px'],
+            content: prefix + "/add",
+            btn: []
+        });
+    }
+
+    function openEditTeam(id) {
+        layer.open({
+            type: 2,
+            title: '修改团队',
+            shadeClose: true,
+            area: ['550px', '450px'],
+            content: prefix + "/edit/" + id,
+            btn: []
+        });
+    }
+
+    function deleteTeam(id) {
+        Swal.fire({
+            title: '确定删除?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: '删除',
+            cancelButtonText: '取消'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.post(prefix + "/remove", { ids: id }, function(res) {
+                    if (res.code === 0) {
+                        Swal.fire({icon:'success', title:'已删除', showConfirmButton:false, timer:800});
+                        loadTeamList();
+                    } else {
+                        Swal.fire('失败', res.msg, 'error');
+                    }
+                });
+            }
+        });
+    }
+</script>
 </body>
 </html>

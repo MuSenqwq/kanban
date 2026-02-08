@@ -1,86 +1,133 @@
 <!DOCTYPE html>
-<html lang="zh" xmlns:th="http://www.thymeleaf.org" >
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:include="include :: header('修改任务看板')" />
+    <th:block th:include="include :: header('编辑看板')" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body { background: #fff; font-family: -apple-system, sans-serif; padding: 20px 30px; }
+        .form-header { margin-bottom: 20px; border-bottom: 1px solid #ebecf0; padding-bottom: 15px; }
+        .form-header h3 { font-size: 18px; font-weight: 700; color: #172b4d; margin: 0; }
+
+        .modern-group { margin-bottom: 20px; }
+        .modern-label { display: block; font-size: 13px; font-weight: 600; color: #42526e; margin-bottom: 8px; }
+        .modern-input { width: 100%; border: 2px solid #dfe1e6; background: #fafbfc; border-radius: 6px; padding: 10px 12px; font-size: 14px; color: #172b4d; outline: none; transition: all 0.2s; }
+        .modern-input:focus { background: #fff; border-color: #0079bf; }
+
+        .color-options { display: flex; gap: 10px; }
+        .color-opt { width: 30px; height: 30px; border-radius: 50%; cursor: pointer; transition: transform 0.2s; position: relative; border: 2px solid transparent; }
+        .color-opt.active { border-color: #333; transform: scale(1.1); }
+
+        /* 状态切换开关 */
+        .switch-box { display: flex; gap: 10px; align-items: center; }
+        .radio-label { cursor: pointer; padding: 6px 12px; border-radius: 4px; border: 1px solid #dfe1e6; font-size: 13px; color: #5e6c84; }
+        .radio-label input { display: none; }
+        .radio-label.checked { background: #e3fcef; border-color: #36b37e; color: #006644; font-weight: 600; }
+        .radio-label.checked.closed { background: #ffebe6; border-color: #ff5630; color: #bf2600; }
+
+        .btn-group-footer { margin-top: 30px; display: flex; justify-content: flex-end; gap: 10px; }
+        .btn-modern { border: none; padding: 10px 24px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+        .btn-save { background: #0079bf; color: #fff; }
+    </style>
 </head>
-<body class="white-bg">
-<div class="wrapper wrapper-content animated fadeInRight ibox-content">
-    <form class="form-horizontal m" id="form-board-edit" th:object="${kbBoard}">
+<body>
+
+<div class="main-content">
+    <div class="form-header">
+        <h3>看板设置</h3>
+    </div>
+
+    <form id="form-board-edit" th:object="${board}">
         <input name="boardId" th:field="*{boardId}" type="hidden">
-        <div class="col-xs-12">
-            <div class="form-group">
-                <label class="col-sm-3 control-label is-required">负责人ID(关联sys_user)：</label>
-                <div class="col-sm-8">
-                    <input name="userId" th:field="*{userId}" class="form-control" type="text" required>
-                </div>
+
+        <div class="modern-group">
+            <label class="modern-label">看板名称</label>
+            <input type="text" name="boardName" th:field="*{boardName}" class="modern-input" required>
+        </div>
+
+        <div class="modern-group">
+            <label class="modern-label">主题颜色</label>
+            <input type="hidden" name="themeColor" id="themeColor" th:field="*{themeColor}">
+            <div class="color-options">
+                <div class="color-opt" data-color="#0079bf" style="background:#0079bf;" onclick="selectColor(this)"></div>
+                <div class="color-opt" data-color="#d29034" style="background:#d29034;" onclick="selectColor(this)"></div>
+                <div class="color-opt" data-color="#519839" style="background:#519839;" onclick="selectColor(this)"></div>
+                <div class="color-opt" data-color="#b04632" style="background:#b04632;" onclick="selectColor(this)"></div>
+                <div class="color-opt" data-color="#89609e" style="background:#89609e;" onclick="selectColor(this)"></div>
+                <div class="color-opt" data-color="#cd5a91" style="background:#cd5a91;" onclick="selectColor(this)"></div>
             </div>
         </div>
-        <div class="col-xs-12">
-            <div class="form-group">
-                <label class="col-sm-3 control-label is-required">看板名称：</label>
-                <div class="col-sm-8">
-                    <input name="boardName" th:field="*{boardName}" class="form-control" type="text" required>
-                </div>
+
+        <div class="modern-group">
+            <label class="modern-label">看板状态</label>
+            <div class="switch-box">
+                <label class="radio-label" th:classappend="*{status} == '0' ? 'checked' : ''" onclick="selectStatus(this)">
+                    <input type="radio" name="status" value="0" th:checked="*{status == '0'}"> <i class="fa fa-play-circle"></i> 进行中
+                </label>
+                <label class="radio-label closed" th:classappend="*{status} == '1' ? 'checked' : ''" onclick="selectStatus(this)">
+                    <input type="radio" name="status" value="1" th:checked="*{status == '1'}"> <i class="fa fa-archive"></i> 已归档
+                </label>
             </div>
         </div>
-        <div class="col-xs-12">
-            <div class="form-group">
-                <label class="col-sm-3 control-label">看板简介：</label>
-                <div class="col-sm-8">
-                    <textarea name="intro" class="form-control">[[*{intro}]]</textarea>
-                </div>
-            </div>
+
+        <div class="modern-group">
+            <label class="modern-label">简介</label>
+            <textarea name="intro" class="modern-input" rows="3" th:field="*{intro}"></textarea>
         </div>
-        <div class="col-xs-12">
-            <div class="form-group">
-                <label class="col-sm-3 control-label">主题颜色：</label>
-                <div class="col-sm-8">
-                    <input name="themeColor" th:field="*{themeColor}" class="form-control" type="text">
-                </div>
-            </div>
-        </div>
-        <div class="col-xs-12">
-            <div class="form-group">
-                <label class="col-sm-3 control-label">显示顺序：</label>
-                <div class="col-sm-8">
-                    <input name="orderNum" th:field="*{orderNum}" class="form-control" type="text">
-                </div>
-            </div>
-        </div>
-        <div class="col-xs-12">
-            <div class="form-group">
-                <label class="col-sm-3 control-label">备注：</label>
-                <div class="col-sm-8">
-                    <textarea name="remark" class="form-control">[[*{remark}]]</textarea>
-                </div>
-            </div>
-        </div>
-        <div class="col-xs-12" style="margin-top: 20px;">
-            <div class="form-group">
-                <div class="col-sm-offset-3 col-sm-8">
-                    <button type="button" class="btn btn-primary" onclick="submitHandler()">提交修改</button>
-                    <button type="button" class="btn btn-default" style="margin-left: 10px;" onclick="cancelEdit()">取消</button>
-                </div>
-            </div>
+
+        <div class="btn-group-footer">
+            <button type="button" class="btn-modern" style="background:#f4f5f7; color:#333;" onclick="closeModal()">关闭</button>
+            <button type="button" class="btn-modern btn-save" onclick="submitForm()">保存更改</button>
         </div>
     </form>
 </div>
+
 <th:block th:include="include :: footer" />
 <script th:inline="javascript">
     var prefix = ctx + "kanban/board";
-    $("#form-board-edit").validate({
-        focusCleanup: true
+    var currentColor = [[${board.themeColor}]];
+
+    $(function(){
+        // 初始化颜色选中
+        $('.color-opt').each(function(){
+            if($(this).data('color') == currentColor) $(this).addClass('active');
+        });
+        if($('.color-opt.active').length === 0) $('.color-opt:first').addClass('active');
     });
 
-    function submitHandler() {
-        if ($.validate.form()) {
-            $.operate.save(prefix + "/edit", $('#form-board-edit').serialize());
-        }
+    function selectColor(el) {
+        $('.color-opt').removeClass('active');
+        $(el).addClass('active');
+        $('#themeColor').val($(el).data('color'));
     }
 
-    function cancelEdit() {
-        var frameIndex = parent.layer.getFrameIndex(window.name);
-        parent.layer.close(frameIndex);
+    function selectStatus(el) {
+        $('.radio-label').removeClass('checked');
+        $(el).addClass('checked');
+        $(el).find('input').prop('checked', true);
+    }
+
+    function submitForm() {
+        $.ajax({
+            url: prefix + "/edit",
+            type: "post",
+            data: $('#form-board-edit').serialize(),
+            success: function(res) {
+                if (res.code === 0) {
+                    Swal.fire({ icon: 'success', title: '已保存', timer: 800, showConfirmButton: false }).then(() => {
+                        if(parent.refreshGrid) parent.refreshGrid(); // 刷新列表页
+                        if(parent.refreshBoard) parent.refreshBoard(); // 刷新详情页背景等
+                        closeModal();
+                    });
+                } else {
+                    Swal.fire('错误', res.msg, 'error');
+                }
+            }
+        });
+    }
+
+    function closeModal() {
+        var index = parent.layer.getFrameIndex(window.name);
+        parent.layer.close(index);
     }
 </script>
 </body>

@@ -2,19 +2,28 @@
 <html lang="zh" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.pollix.at/thymeleaf/shiro">
 <head>
     <th:block th:include="include :: header('任务看板')" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        /* 全局重置与字体优化 */
-        body {
-            background-color: #f7f9fc; /* 更清爽的灰蓝背景 */
-            font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
-            color: #172b4d;
+        :root {
+            --primary-color: #0079bf;
+            --bg-color: #f4f5f7;
+            --card-bg: #ffffff;
+            --text-main: #172b4d;
+            --text-sub: #5e6c84;
         }
 
-        /* 顶部导航栏/工具栏 */
+        body {
+            background-color: var(--bg-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: var(--text-main);
+            overflow-x: hidden;
+        }
+
+        /* 顶部导航 - 极简白风格 */
         .dashboard-header {
             background: #fff;
-            padding: 15px 30px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            padding: 16px 30px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -25,259 +34,226 @@
 
         .header-title {
             font-size: 20px;
-            font-weight: 600;
-            color: #172b4d;
+            font-weight: 700;
+            color: var(--text-main);
             display: flex;
             align-items: center;
+            gap: 10px;
         }
-        .header-title i { margin-right: 10px; color: #0079bf; }
+        .header-title i { color: var(--primary-color); }
 
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 15px; /* 元素间距 */
-        }
-
-        /* 搜索框美化 */
-        .modern-search {
-            position: relative;
-        }
-        .modern-search input {
-            border: 1px solid #dfe1e6;
-            background-color: #fafbfc;
-            border-radius: 20px; /* 圆角胶囊状 */
-            padding: 6px 15px 6px 35px;
-            width: 240px;
+        /* 现代搜索框 */
+        .search-wrapper { position: relative; }
+        .search-input {
+            border: 2px solid transparent;
+            background-color: #f0f2f5;
+            border-radius: 8px;
+            padding: 10px 15px 10px 40px;
+            width: 260px;
             font-size: 14px;
-            transition: all 0.2s;
+            transition: all 0.3s ease;
         }
-        .modern-search input:focus {
+        .search-input:focus {
             background-color: #fff;
-            border-color: #4c9aff;
-            box-shadow: 0 0 0 2px rgba(76, 154, 255, 0.2);
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 12px rgba(0, 121, 191, 0.15);
+            width: 320px;
             outline: none;
-            width: 300px; /* 聚焦变宽 */
         }
-        .modern-search i {
+        .search-icon {
             position: absolute;
-            left: 12px;
+            left: 14px;
             top: 50%;
             transform: translateY(-50%);
             color: #7a869a;
         }
 
-        /* 按钮美化 */
+        /* 3D质感按钮 */
         .btn-create {
-            background-color: #0079bf;
+            background: var(--primary-color);
             color: #fff;
             border: none;
-            padding: 8px 20px;
-            border-radius: 4px;
-            font-weight: 500;
-            transition: background 0.2s;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
             cursor: pointer;
+            box-shadow: 0 4px 0 #005a8e; /* 3D底边 */
+            transition: all 0.1s;
             text-decoration: none !important;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
-        .btn-create:hover { background-color: #026aa7; color: #fff; }
-        .btn-create i { margin-right: 5px; }
-
-        /* 内容容器 */
-        .dashboard-content {
-            padding: 30px;
-            max-width: 1600px;
-            margin: 0 auto;
-        }
+        .btn-create:hover { background-color: #026aa7; color: #fff; transform: translateY(-1px); box-shadow: 0 5px 0 #005a8e; }
+        .btn-create:active { transform: translateY(4px); box-shadow: 0 0 0 #005a8e; }
 
         /* 网格布局 */
-        .board-grid {
-            display: flex;
-            flex-wrap: wrap;
-            margin: -12px;
-        }
+        .dashboard-content { padding: 30px; max-width: 1600px; margin: 0 auto; }
+        .board-grid { display: flex; flex-wrap: wrap; margin: -15px; }
+        .board-item-wrapper { width: 25%; padding: 15px; box-sizing: border-box; }
 
-        .board-item-wrapper {
-            width: 25%; /* 一行四个 */
-            padding: 12px;
-            box-sizing: border-box;
-        }
-
-        /* 响应式 */
         @media (max-width: 1400px) { .board-item-wrapper { width: 33.33%; } }
-        @media (max-width: 900px)  { .board-item-wrapper { width: 50%; } }
-        @media (max-width: 600px)  { .board-item-wrapper { width: 100%; } }
+        @media (max-width: 992px)  { .board-item-wrapper { width: 50%; } }
+        @media (max-width: 576px)  { .board-item-wrapper { width: 100%; } }
 
         /* 卡片设计 */
         .board-card {
-            background: #fff;
-            border-radius: 8px;
-            height: 140px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            height: 160px;
             position: relative;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            border: 1px solid rgba(223, 225, 230, 0.5);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border: 1px solid rgba(0,0,0,0.05);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
         .board-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.08);
-            border-color: transparent;
+            transform: translateY(-8px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
         }
 
-        /* 侧边颜色条 */
-        .card-color-strip {
+        .card-header-bg {
+            height: 45px;
+            width: 100%;
+            opacity: 0.15;
             position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 6px;
-            background-color: #ccc; /* 默认灰，会被JS覆盖 */
+            top: 0; left: 0;
         }
 
         .card-content {
-            padding: 16px 16px 16px 22px; /* 左侧多留点给颜色条 */
+            padding: 20px;
             flex: 1;
             display: flex;
             flex-direction: column;
+            z-index: 1;
         }
 
         .card-title {
-            font-size: 16px;
+            font-size: 17px;
             font-weight: 700;
-            color: #172b4d;
-            margin-bottom: 6px;
+            color: var(--text-main);
+            margin-bottom: 8px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            padding-left: 12px;
+            position: relative;
+        }
+        .card-title::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 50%;
+            transform: translateY(-50%);
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
         }
 
         .card-desc {
             font-size: 13px;
-            color: #5e6c84;
-            line-height: 1.5;
+            color: var(--text-sub);
+            line-height: 1.6;
             flex: 1;
             overflow: hidden;
-            text-overflow: ellipsis;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
+            margin-bottom: 10px;
         }
 
         .card-footer {
-            margin-top: auto;
             display: flex;
             align-items: center;
             justify-content: space-between;
             font-size: 12px;
             color: #8993a4;
+            padding-top: 10px;
+            border-top: 1px solid #f0f0f0;
         }
 
-        /* 右上角更多操作 */
+        /* 悬浮操作按钮 */
         .card-actions {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            opacity: 0; /* 默认隐藏，悬浮显示 */
+            top: 15px; right: 15px;
+            display: flex; gap: 8px;
+            opacity: 0;
             transition: opacity 0.2s;
+            z-index: 2;
         }
         .board-card:hover .card-actions { opacity: 1; }
 
-        .action-icon {
-            color: #6b778c;
-            padding: 5px;
-            border-radius: 4px;
-        }
-        .action-icon:hover {
-            background-color: #ebecf0;
-            color: #172b4d;
-        }
-        .action-icon.delete:hover {
-            color: #bf2600;
-            background-color: #ffebe6;
-        }
-
-        /* 状态标记 */
-        .status-dot {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
+        .action-btn {
+            width: 32px; height: 32px;
             border-radius: 50%;
-            margin-right: 4px;
+            display: flex; align-items: center; justify-content: center;
+            background: #fff;
+            color: var(--text-sub);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            transition: all 0.2s;
         }
-        .status-active { background-color: #36b37e; }
-        .status-closed { background-color: #ff5630; }
+        .action-btn:hover { color: var(--primary-color); transform: scale(1.1); }
+        .action-btn.delete:hover { color: #e74c3c; background: #fff5f5; }
 
+        .status-badge {
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .status-active { background-color: #e3fcef; color: #006644; }
+        .status-closed { background-color: #ffebe6; color: #bf2600; }
     </style>
 </head>
 <body>
 
 <div class="dashboard-header">
     <div class="header-title">
-        <i class="fa fa-trello"></i> 我的看板
+        <i class="fa fa-trello"></i> 看板中心
     </div>
     <div class="header-actions">
         <form id="searchForm" onsubmit="return false;">
-            <div class="modern-search">
-                <i class="fa fa-search"></i>
-                <input type="text" name="boardName" placeholder="搜索看板名称..." onkeyup="loadBoardList()">
+            <div class="search-wrapper">
+                <i class="fa fa-search search-icon"></i>
+                <input type="text" class="search-input" name="boardName" placeholder="搜索看板..." onkeyup="loadBoardList()">
                 <input type="hidden" name="status" value="">
             </div>
         </form>
 
-        <a class="btn-create">
-            <i class="fa fa-plus"></i> 创建看板
-        </a>
+        <button class="btn-create" onclick="openBoardModal()">
+            <i class="fa fa-plus"></i> 新建看板
+        </button>
     </div>
 </div>
 
 <div class="dashboard-content">
     <div class="board-grid" id="boardContainer">
-        <div class="board-item-wrapper" style="width:100%; text-align:center; padding:50px; color:#999;">
-            <i class="fa fa-circle-o-notch fa-spin"></i> 加载中...
-        </div>
     </div>
 </div>
 
 <th:block th:include="include :: footer" />
 
 <script th:inline="javascript">
+    var prefix = ctx + "kanban/board";
+    // 权限标识
     var editFlag = [[${@permission.hasPermi('kanban:board:edit')}]];
     var removeFlag = [[${@permission.hasPermi('kanban:board:remove')}]];
-    var datas = [[${@dict.getType('sys_normal_disable')}]];
-    var prefix = ctx + "kanban/board";
-    var currentLayerIndex;
-    var editLayerIndex;
-    //创建看板
-    $(function() {
-        loadBoardList();
-        function openBoardAddPage() {
-            if (currentLayerIndex) {
-                parent.layer.close(currentLayerIndex);
-            }
-            currentLayerIndex = layer.open({
-                type: 2,
-                title: "创建看板",
-                content: prefix + "/add",
-                area: ["700px", "400px"],
-                end: function() {
-                    currentLayerIndex = null;
-                    loadBoardList();
-                }
-            });
-        }
-
-        $(".btn-create").off("click").click(function() {
-            openBoardAddPage();
-        });
-    });
 
     $(function() {
         loadBoardList();
     });
 
-    // 加载数据
+    // ============================================
+    //  核心逻辑 - 去若依化交互
+    // ============================================
+
+    // 1. 加载数据
     function loadBoardList() {
         var formData = $("#searchForm").serialize();
         $.ajax({
@@ -285,114 +261,168 @@
             type: 'post',
             data: formData,
             dataType: "json",
+            beforeSend: function() {
+                // 自定义加载动画，不使用 $.modal.loading
+                $("#boardContainer").html(
+                    `<div style="width:100%; text-align:center; padding:100px 0; color:#999;">
+                        <div class="fa fa-spinner fa-spin fa-3x" style="color:#dfe1e6; margin-bottom:15px;"></div>
+                        <div>加载数据中...</div>
+                     </div>`
+                );
+            },
             success: function(res) {
                 if (res.code === 0) {
                     renderBoards(res.rows);
                 } else {
-                    $.modal.msgError(res.msg);
+                    Swal.fire({
+                        icon: 'error',
+                        title: '加载失败',
+                        text: res.msg,
+                        toast: true, position: 'top-end', showConfirmButton: false, timer: 3000
+                    });
                 }
+            },
+            error: function() {
+                $("#boardContainer").html('<div style="width:100%; text-align:center; padding:50px;">加载出错，请刷新重试</div>');
             }
         });
     }
 
-    // 渲染卡片
+    // 2. 渲染 HTML (保持逻辑不变，升级样式)
     function renderBoards(rows) {
-        var html = [];
-        var $container = $("#boardContainer");
-
         if (!rows || rows.length === 0) {
-            $container.html('<div style="width:100%; text-align:center; padding:60px; color:#6b778c;">' +
-                '<i class="fa fa-inbox fa-3x"></i><br><br>没有找到相关看板</div>');
+            $("#boardContainer").html(
+                `<div style="width:100%; text-align:center; padding:80px 0; color:#6b778c;">
+                    <img src="/ruoyi/img/profile.jpg" style="width:80px; opacity:0.1; border-radius:50%; margin-bottom:20px; filter: grayscale(100%);">
+                    <br>暂无看板，去创建一个吧
+                 </div>`
+            );
             return;
         }
 
-        for (var i = 0; i < rows.length; i++) {
-            var row = rows[i];
+        var html = rows.map(function(row) {
             var themeColor = row.themeColor || '#0079bf';
-            var isClosed = row.status === '1'; // 1=关闭
-            var statusClass = isClosed ? 'status-closed' : 'status-active';
-            var statusText = isClosed ? '已关闭' : '进行中';
+            var isClosed = row.status === '1';
+            var statusBadge = isClosed
+                ? `<span class="status-badge status-closed">已归档</span>`
+                : `<span class="status-badge status-active">进行中</span>`;
 
-            html.push('<div class="board-item-wrapper">');
+            var dateStr = row.createTime ? row.createTime.substring(0, 10) : '-';
 
-            // 卡片整体点击跳转
-            html.push('  <div class="board-card" onclick="openKanbanView(\'' + row.boardId + '\', \'' + row.boardName + '\')">');
-
-            // 1. 侧边颜色条
-            html.push('    <div class="card-color-strip" style="background-color: ' + themeColor + '"></div>');
-
-            // 2. 右上角操作按钮 (阻止冒泡)
-            html.push('    <div class="card-actions" onclick="event.stopPropagation()">');
+            // 操作按钮
+            var actions = '';
             if (editFlag !== 'hidden') {
-                html.push('      <a class="action-icon" title="设置" onclick="openBoardEditPage(\'' + row.boardId + '\')"><i class="fa fa-cog"></i></a>');
+                actions += `<a class="action-btn" title="设置" onclick="openBoardModal('${row.boardId}')"><i class="fa fa-cog"></i></a>`;
             }
             if (removeFlag !== 'hidden') {
-                html.push('      <a class="action-icon delete" title="删除" onclick="deleteBoard(\'' + row.boardId + '\')"><i class="fa fa-trash-o"></i></a>');
+                actions += `<a class="action-btn delete" title="删除" onclick="deleteBoard('${row.boardId}')"><i class="fa fa-trash-o"></i></a>`;
             }
-            html.push('    </div>');
 
-            // 3. 内容主体
-            html.push('    <div class="card-content">');
-            html.push('      <div class="board-title" title="' + row.boardName + '">' + row.boardName + '</div>');
-            html.push('      <div class="card-desc">' + (row.intro || '暂无描述...') + '</div>');
+            return `
+            <div class="board-item-wrapper">
+                <div class="board-card" onclick="openKanbanView('${row.boardId}', '${row.boardName}')">
+                    <div class="card-header-bg" style="background-color: ${themeColor}"></div>
 
-            // 4. 底部信息
-            html.push('      <div class="card-footer">');
-            html.push('        <span><i class="status-dot ' + statusClass + '"></i>' + statusText + '</span>');
-            // 显示创建时间 (截取日期部分)
-            var dateStr = row.createTime ? row.createTime.substring(0, 10) : '';
-            html.push('        <span>' + dateStr + '</span>');
-            html.push('      </div>'); // end footer
+                    <div class="card-actions" onclick="event.stopPropagation()">
+                        ${actions}
+                    </div>
 
-            html.push('    </div>'); // end card-content
-            html.push('  </div>'); // end board-card
-            html.push('</div>'); // end wrapper
-        }
+                    <div class="card-content">
+                        <div class="card-title" title="${row.boardName}" style="--title-color:${themeColor}">
+                            <style>.card-title[title="${row.boardName}"]::before{background:${themeColor}}</style>
+                            ${row.boardName}
+                        </div>
+                        <div class="card-desc">${row.intro || '暂无描述信息...'}</div>
 
-        $container.html(html.join(''));
+                        <div class="card-footer">
+                            ${statusBadge}
+                            <span><i class="fa fa-clock-o"></i> ${dateStr}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+
+        $("#boardContainer").html(html);
     }
 
-    // 跳转详情
+    // 3. 弹窗交互 - 使用 Layer 深度定制 (替代 $.modal.open)
+    function openBoardModal(boardId) {
+        var url = prefix + "/add";
+        var title = "创建新看板";
+        if(boardId) {
+            url = prefix + "/edit/" + boardId;
+            title = "看板设置";
+        }
+
+        layer.open({
+            type: 2,
+            title: title,
+            shadeClose: true,
+            shade: 0.3,
+            area: ['600px', '450px'],
+            content: url,
+            anim: 5, // 渐显动画
+            btn: [], // 不使用默认按钮，完全交由子页面控制或自动保存
+            success: function(layero, index){
+                // 美化弹窗标题栏
+                var header = layero.find('.layui-layer-title');
+                header.css({
+                    'background': '#fff',
+                    'border-bottom': '1px solid #f0f0f0',
+                    'font-weight': 'bold',
+                    'color': '#172b4d'
+                });
+            },
+            end: function() {
+                loadBoardList(); // 弹窗关闭后自动刷新
+            }
+        });
+    }
+
+    // 4. 删除交互 - 使用 SweetAlert2 (替代 $.operate.remove)
+    function deleteBoard(id) {
+        Swal.fire({
+            title: '确定要删除吗?',
+            text: "删除看板将无法找回！",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: '是的，删除它!',
+            cancelButtonText: '取消'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // 手动执行 AJAX 删除
+                $.ajax({
+                    url: prefix + "/remove",
+                    type: "post",
+                    data: { "ids": id },
+                    success: function(res) {
+                        if (res.code === 0) {
+                            Swal.fire(
+                                '已删除!',
+                                '该看板已被移除。',
+                                'success'
+                            );
+                            loadBoardList();
+                        } else {
+                            Swal.fire('错误', res.msg, 'error');
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    // 跳转详情 (保持若依Tab机制，因为这是框架核心体验)
     function openKanbanView(boardId, boardName) {
         var url = ctx + 'kanban/view/' + boardId;
         createMenuItem(url, boardName);
     }
 
-    // 删除
-    function deleteBoard(id) {
-        $.modal.confirm("确定要删除该看板吗？", function() {
-            $.operate.post(prefix + "/remove", { "ids": id }, function(result) {
-                if (result.code == web_status.SUCCESS) {
-                    $.modal.msgSuccess("删除成功");
-                    loadBoardList(); // 重新加载
-                } else {
-                    $.modal.alertError(result.msg);
-                }
-            });
-        });
-    }
-//编辑
-    function openBoardEditPage(boardId) {
-        editLayerIndex = layer.open({
-            type: 2,
-            title: "编辑看板",
-            content: prefix + "/edit/" + boardId,
-            area: ["700px", "400px"],
-            end: function() {
-                editLayerIndex = null;
-                loadBoardList();
-            }
-        });
-    }
-
     // 供子窗口调用的刷新
-    window.refreshGrid = function() {
-        loadBoardList();
-    }
-    // 兼容 RuoYi 默认回调
-    function search() {
-        loadBoardList();
-    }
+    window.refreshGrid = function() { loadBoardList(); }
 </script>
 </body>
 </html>

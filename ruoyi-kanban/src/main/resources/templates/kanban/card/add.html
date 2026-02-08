@@ -1,146 +1,166 @@
 <!DOCTYPE html>
-<html lang="zh" xmlns:th="http://www.thymeleaf.org" >
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:include="include :: header('新增任务卡片')" />
+    <th:block th:include="include :: header('新建任务')" />
     <th:block th:include="include :: datetimepicker-css" />
-    <th:block th:include="include :: summernote-css" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        input[type=range] { -webkit-appearance: none; width: 100%; margin: 5px 0; }
-        input[type=range]:focus { outline: none; }
-        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cursor: pointer; background: #e9ecef; border-radius: 3px; }
-        input[type=range]::-webkit-slider-thumb { height: 16px; width: 16px; border-radius: 50%; background: #0079bf; cursor: pointer; -webkit-appearance: none; margin-top: -5px; }
+        body { background: #fff; font-family: -apple-system, sans-serif; padding: 25px; color: #172b4d; }
+
+        .card-form-container { max-width: 100%; }
+
+        .form-row { display: flex; gap: 20px; margin-bottom: 20px; }
+        .form-col { flex: 1; }
+
+        .modern-label { font-weight: 600; font-size: 13px; color: #5e6c84; margin-bottom: 6px; display: block; }
+        .modern-input {
+            width: 100%; border: 1px solid #dfe1e6; background: #fafbfc;
+            border-radius: 4px; padding: 10px; font-size: 14px; transition: all 0.2s;
+        }
+        .modern-input:focus { background: #fff; border-color: #4c9aff; box-shadow: 0 0 0 2px rgba(76, 154, 255, 0.2); outline: none; }
+
+        /* 优先级选择美化 */
+        .priority-group { display: flex; gap: 10px; }
+        .priority-opt {
+            flex: 1; text-align: center; padding: 8px; border: 1px solid #eee; border-radius: 4px;
+            cursor: pointer; font-size: 12px; transition: all 0.2s; color: #666;
+        }
+        .priority-opt:hover { background: #f4f5f7; }
+        .priority-opt input { display: none; }
+
+        .priority-opt.p-0.active { background: #ffebe6; color: #de350b; border-color: #ffbdad; font-weight: bold; } /* 紧急 */
+        .priority-opt.p-1.active { background: #fff7d6; color: #b65c02; border-color: #ffe380; font-weight: bold; } /* 高 */
+        .priority-opt.p-2.active { background: #deebff; color: #0747a6; border-color: #b3d4ff; font-weight: bold; } /* 中 */
+        .priority-opt.p-3.active { background: #eff2f5; color: #42526e; border-color: #dfe1e6; font-weight: bold; } /* 低 */
+
+        .btn-footer {
+            margin-top: 30px; padding-top: 20px; border-top: 1px solid #ebecf0;
+            display: flex; justify-content: flex-end; gap: 12px;
+        }
+        .btn-submit {
+            background: linear-gradient(to bottom, #0052cc, #0747a6);
+            color: #fff; border: none; padding: 8px 20px; border-radius: 4px; font-weight: 600; cursor: pointer;
+        }
+        .btn-submit:hover { opacity: 0.9; }
     </style>
 </head>
-<body class="white-bg">
-<div class="wrapper wrapper-content animated fadeInRight ibox-content">
-    <form class="form-horizontal m" id="form-card-add">
-        <th:block th:if="${boardId != null}">
-            <input name="boardId" type="hidden" th:value="${boardId}" />
-            <input name="listId" type="hidden" th:value="${listId}" />
-        </th:block>
+<body>
 
-        <th:block th:if="${boardId == null}">
-            <div class="form-group">
-                <label class="col-sm-3 control-label is-required">归属看板：</label>
-                <div class="col-sm-8">
-                    <select name="boardId" class="form-control" onchange="loadLists(this.value)" required>
-                        <option value="">-- 请选择看板 --</option>
-                        <option th:each="b : ${boards}" th:value="${b.boardId}" th:text="${b.boardName}"></option>
-                    </select>
+<div class="card-form-container">
+    <form id="form-card-add">
+        <input type="hidden" name="boardId" th:value="${boardId}">
+        <input type="hidden" name="listId" th:value="${listId}">
+
+        <div class="modern-group" style="margin-bottom: 20px;">
+            <label class="modern-label">任务标题 <span style="color:red">*</span></label>
+            <input type="text" name="cardTitle" class="modern-input" placeholder="输入任务核心内容..." required style="font-size: 16px; font-weight: 500;">
+        </div>
+
+        <div class="form-row">
+            <div class="form-col">
+                <label class="modern-label"><i class="fa fa-flag"></i> 优先级</label>
+                <div class="priority-group">
+                    <label class="priority-opt p-0" onclick="setPri(this)">
+                        <input type="radio" name="priority" value="0"> 紧急
+                    </label>
+                    <label class="priority-opt p-1" onclick="setPri(this)">
+                        <input type="radio" name="priority" value="1"> 高
+                    </label>
+                    <label class="priority-opt p-2 active" onclick="setPri(this)">
+                        <input type="radio" name="priority" value="2" checked> 中
+                    </label>
+                    <label class="priority-opt p-3" onclick="setPri(this)">
+                        <input type="radio" name="priority" value="3"> 低
+                    </label>
                 </div>
             </div>
-            <div class="form-group">
-                <label class="col-sm-3 control-label is-required">归属清单：</label>
-                <div class="col-sm-8">
-                    <select name="listId" id="listSelect" class="form-control" required>
-                        <option value="">-- 请先选择看板 --</option>
-                    </select>
+            <div class="form-col">
+                <label class="modern-label"><i class="fa fa-calendar"></i> 截止时间</label>
+                <div class="input-group date">
+                    <input name="deadline" class="modern-input time-input" placeholder="选择日期" type="text" readonly style="background-color:#fff; cursor:pointer;">
+                    <span class="input-group-addon" style="display:none;"><i class="fa fa-calendar"></i></span>
                 </div>
-            </div>
-        </th:block>
-
-        <div class="form-group">
-            <label class="col-sm-3 control-label is-required">任务标题：</label>
-            <div class="col-sm-8">
-                <input name="cardTitle" class="form-control" type="text" required>
             </div>
         </div>
 
-        <div class="form-group">
-            <label class="col-sm-3 control-label">优先级：</label>
-            <div class="col-sm-8">
-                <select name="priority" class="form-control" th:with="type=${@dict.getType('kb_card_priority')}">
-                    <option th:each="dict : ${type}" th:text="${dict.dictLabel}" th:value="${dict.dictValue}" th:selected="${dict.isDefault == 'Y'}"></option>
+        <div class="form-row">
+            <div class="form-col">
+                <label class="modern-label"><i class="fa fa-user"></i> 执行人</label>
+                <input type="text" name="executorId" class="modern-input" placeholder="填写执行人账号">
+            </div>
+            <div class="form-col">
+                <label class="modern-label"><i class="fa fa-percent"></i> 初始进度</label>
+                <select name="progress" class="modern-input">
+                    <option value="0">0% (未开始)</option>
+                    <option value="25">25%</option>
+                    <option value="50">50%</option>
+                    <option value="75">75%</option>
+                    <option value="100">100% (已完成)</option>
                 </select>
             </div>
         </div>
 
-        <div class="form-group">
-            <label class="col-sm-3 control-label">任务进度：</label>
-            <div class="col-sm-8">
-                <div style="display: flex; align-items: center;">
-                    <input name="progress" type="range" min="0" max="100" value="0" step="5"
-                           style="flex-grow: 1; margin-right: 15px;"
-                           oninput="$('#prog-label').text(this.value + '%')">
-                    <span id="prog-label" class="badge badge-primary" style="min-width: 45px; font-size: 13px;">0%</span>
-                </div>
-            </div>
+        <div class="modern-group">
+            <label class="modern-label">详细描述</label>
+            <textarea name="description" class="modern-input" rows="6" placeholder="支持 Markdown 格式（预留）..."></textarea>
         </div>
 
-        <div class="form-group">
-            <label class="col-sm-3 control-label">截止时间：</label>
-            <div class="col-sm-8">
-                <div class="input-group date">
-                    <input name="deadline" class="form-control" placeholder="yyyy-MM-dd" type="text">
-                    <span class="input-group-addon"><i class="fa fa-calendar"></i></span>
-                </div>
-            </div>
+        <div class="btn-footer">
+            <button type="button" class="btn-modern" style="border:1px solid #ddd; background:#fff; color:#555; padding:8px 15px; border-radius:4px; cursor:pointer;" onclick="closeModal()">取消</button>
+            <button type="button" class="btn-submit" onclick="submitHandler()">创建任务</button>
         </div>
-
-        <div class="form-group">
-            <label class="col-sm-3 control-label">任务详情：</label>
-            <div class="col-sm-8">
-                <input type="hidden" class="form-control" name="cardContent">
-                <div class="summernote" id="cardContent"></div>
-            </div>
-        </div>
-
-        <input name="orderNum" type="hidden" value="0">
     </form>
 </div>
+
 <th:block th:include="include :: footer" />
 <th:block th:include="include :: datetimepicker-js" />
-<th:block th:include="include :: summernote-js" />
-<script th:inline="javascript">
-    var prefix = ctx + "kanban/card"
-    $("#form-card-add").validate({ focusCleanup: true });
+<script>
+    var prefix = ctx + "kanban/card";
+
+    function setPri(el) {
+        $('.priority-opt').removeClass('active');
+        $(el).addClass('active');
+    }
 
     function submitHandler() {
         if ($.validate.form()) {
-            $.operate.save(prefix + "/add", $('#form-card-add').serialize(), function(result) {
-                if (result.code === web_status.SUCCESS) {
-                    $.modal.msgSuccess(result.msg);
-                    // 尝试刷新父级页面（如果是看板视图）
-                    try { parent.refreshBoard(); } catch(e) {}
-                    // 尝试刷新表格（如果是任务池列表）
-                    try { parent.$.table.refresh(); } catch(e) {}
-                    $.modal.close();
-                } else {
-                    $.modal.alertError(result.msg);
+            $.ajax({
+                url: prefix + "/add",
+                type: "post",
+                data: $('#form-card-add').serialize(),
+                success: function(res) {
+                    if (res.code === 0) {
+                        // 使用 Toast 通知，不阻断
+                        Swal.fire({
+                            icon: 'success',
+                            title: '任务已添加',
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 1500
+                        }).then(() => {
+                            parent.refreshBoard();
+                            closeModal();
+                        });
+                    } else {
+                        Swal.fire('Error', res.msg, 'error');
+                    }
                 }
             });
         }
     }
 
-    // 动态加载清单列表
-    function loadLists(boardId) {
-        $("#listSelect").html('<option value="">加载中...</option>');
-        if(!boardId) {
-            $("#listSelect").html('<option value="">-- 请先选择看板 --</option>');
-            return;
-        }
-        $.get(prefix + "/getLists?boardId=" + boardId, function(res) {
-            var html = '<option value="">-- 请选择清单 --</option>';
-            if(res.data && res.data.length > 0) {
-                for(var i=0; i<res.data.length; i++) {
-                    html += '<option value="' + res.data[i].listId + '">' + res.data[i].listName + '</option>';
-                }
-            } else {
-                html = '<option value="">该看板下没有清单，请先去看板添加</option>';
-            }
-            $("#listSelect").html(html);
-        });
+    function closeModal() {
+        var index = parent.layer.getFrameIndex(window.name);
+        parent.layer.close(index);
     }
 
-    $("input[name='deadline']").datetimepicker({ format: "yyyy-mm-dd", minView: "month", autoclose: true });
-
-    $(function() {
-        $('.summernote').summernote({
-            lang: 'zh-CN', height: 150, dialogsInBody: true,
-            callbacks: {
-                onChange: function(contents) { $("input[name='" + this.id + "']").val(contents); }
-            }
-        });
+    // 初始化日期控件样式适配
+    $(".time-input").datetimepicker({
+        format: 'yyyy-mm-dd',
+        autoclose: true,
+        minView: 2,
+        language: 'zh-CN'
     });
 </script>
 </body>

@@ -2,283 +2,223 @@
 <html lang="zh" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.pollix.at/thymeleaf/shiro">
 <head>
     <th:block th:include="include :: header('我的消息')" />
-    <!-- 引入select2样式（用于指定用户选择） -->
-    <th:block th:include="include :: select2-css"/>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        /* 新增：修复select2下拉框超出弹窗问题 */
-        .select2-dropdown {
-            z-index: 9999 !important; /* 提高层级，避免被弹窗遮挡 */
+        body { background-color: #f4f5f7; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+        .msg-layout { display: flex; height: 100%; max-width: 1200px; margin: 0 auto; width: 100%; padding: 20px; gap: 20px; }
+
+        /* 左侧侧边栏 */
+        .msg-sidebar { width: 240px; background: #fff; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .sidebar-btn {
+            padding: 12px 15px; border-radius: 8px; color: #5e6c84; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 10px; font-weight: 500;
         }
-        /* 调整弹窗内form-group的间距，避免内容溢出 */
-        #form-publish-message .form-group {
-            margin-bottom: 15px;
+        .sidebar-btn:hover { background: #ebecf0; color: #172b4d; }
+        .sidebar-btn.active { background: #e6f7ff; color: #0079bf; font-weight: 600; }
+        .sidebar-btn i { width: 20px; text-align: center; }
+
+        .btn-compose {
+            background: #0079bf; color: #fff; text-align: center; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; margin-bottom: 10px; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,121,191,0.2);
         }
-        /* 指定用户选择框容器适配 */
-        #userSelectDiv {
-            width: 100%;
-            box-sizing: border-box;
+        .btn-compose:hover { background: #005a8e; transform: translateY(-1px); }
+
+        /* 右侧消息列表 */
+        .msg-content { flex: 1; background: #fff; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+
+        .msg-header { padding: 15px 25px; border-bottom: 1px solid #ebecf0; display: flex; justify-content: space-between; align-items: center; height: 60px; }
+        .header-title { font-size: 16px; font-weight: 700; color: #172b4d; }
+
+        .msg-list-container { flex: 1; overflow-y: auto; padding: 0; }
+        .msg-list-container::-webkit-scrollbar { width: 6px; }
+        .msg-list-container::-webkit-scrollbar-thumb { background: #dfe1e6; border-radius: 3px; }
+
+        .msg-item {
+            padding: 20px 25px; border-bottom: 1px solid #f4f5f7; cursor: pointer; transition: background 0.1s; position: relative;
         }
+        .msg-item:hover { background: #fafbfc; }
+        .msg-item.unread { background: #fff; }
+        .msg-item.unread::before {
+            content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #0079bf;
+        }
+
+        .msg-top { display: flex; justify-content: space-between; margin-bottom: 6px; }
+        .msg-title { font-size: 15px; font-weight: 600; color: #172b4d; display: flex; align-items: center; gap: 8px; }
+        .unread-dot { width: 8px; height: 8px; background: #0079bf; border-radius: 50%; display: inline-block; }
+
+        .msg-time { font-size: 12px; color: #97a0af; }
+        .msg-body { font-size: 14px; color: #5e6c84; line-height: 1.5; white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+        .empty-state { text-align: center; padding: 60px; color: #97a0af; }
+
+        /* 标签 */
+        .type-badge { font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #ebecf0; color: #5e6c84; font-weight: normal; }
+        .type-badge.system { background: #deebff; color: #0747a6; }
     </style>
 </head>
 <body class="gray-bg">
-<div class="container-div">
-    <div class="row">
-        <div class="col-sm-12 search-collapse">
-            <form id="formId">
-                <div class="select-list">
-                    <ul>
-                        <li>
-                            状态：
-                            <select name="isRead">
-                                <option value="">所有</option>
-                                <option value="0">未读</option>
-                                <option value="1">已读</option>
-                            </select>
-                        </li>
-                        <li>
-                            <a class="btn btn-primary btn-rounded btn-sm" onclick="$.table.search()"><i class="fa fa-search"></i>&nbsp;搜索</a>
-                            <a class="btn btn-warning btn-rounded btn-sm" onclick="$.form.reset()"><i class="fa fa-refresh"></i>&nbsp;重置</a>
-                        </li>
-                    </ul>
-                </div>
-            </form>
+
+<div class="msg-layout">
+    <div class="msg-sidebar">
+        <div class="btn-compose" onclick="openPublishModal()" shiro:hasPermission="system:message:publish">
+            <i class="fa fa-pencil"></i> 发布通知
         </div>
 
-        <div class="btn-group-sm" id="toolbar" role="group">
-            <!-- 原有全部已读按钮 -->
-            <a class="btn btn-success" onclick="markReadAll()">
-                <i class="fa fa-check"></i> 全部已读
-            </a>
-            <!-- 新增：发布通知按钮（仅管理员可见） -->
-            <a class="btn btn-primary" onclick="openPublishMessage()" shiro:hasRole="admin">
-                <i class="fa fa-bullhorn"></i> 发布通知
-            </a>
+        <div class="sidebar-btn active" onclick="loadMessages()">
+            <i class="fa fa-inbox"></i> 收件箱
         </div>
+        <div class="sidebar-btn" style="cursor: default; opacity: 0.6;">
+            <i class="fa fa-paper-plane"></i> 已发送 (开发中)
+        </div>
+    </div>
 
-        <div class="col-sm-12 select-table table-striped">
-            <table id="bootstrap-table"></table>
+    <div class="msg-content">
+        <div class="msg-header">
+            <div class="header-title">消息列表</div>
+            <button class="btn btn-default btn-xs" onclick="markAllRead()"><i class="fa fa-check-circle-o"></i> 全部已读</button>
+        </div>
+        <div class="msg-list-container" id="msgList">
         </div>
     </div>
 </div>
 
-<!-- 新增：发布通知弹窗（调整宽度+布局，修复下拉框溢出） -->
-<div id="publishMessageModal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-xl"> <!-- 改为超大弹窗，避免内容溢出 -->
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                <h4 class="modal-title">发布系统通知</h4>
-            </div>
-            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;"> <!-- 增加滚动，避免内容过高 -->
-                <form class="form-horizontal m" id="form-publish-message">
-                    <div class="form-group">
-                        <label class="col-sm-2 control-label is-required">通知标题：</label>
-                        <div class="col-sm-9">
-                            <input type="text" name="title" class="form-control" placeholder="请输入通知标题" required>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="col-sm-2 control-label is-required">通知内容：</label>
-                        <div class="col-sm-9">
-                            <textarea name="content" class="form-control" rows="5" placeholder="请输入通知内容" required></textarea>
-                        </div>
-                    </div>
-                    <!-- 新增：消息类型下拉框 -->
-                    <div class="form-group">
-                        <label class="col-sm-2 control-label is-required">消息类型：</label>
-                        <div class="col-sm-9">
-                            <select name="type" class="form-control" required>
-                                <option value="">请选择消息类型</option>
-                                <option value="1" selected>系统通知</option> <!-- 默认选中系统通知 -->
-                                <option value="2">任务通知</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="col-sm-2 control-label">接收范围：</label>
-                        <div class="col-sm-9">
-                            <label class="radio-inline">
-                                <input type="radio" name="scope" value="all" checked> 所有用户
-                            </label>
-                            <label class="radio-inline">
-                                <input type="radio" name="scope" value="specified"> 指定用户
-                            </label>
-                            <!-- 指定用户选择框（默认隐藏，适配AssignUser数据） -->
-                            <div id="userSelectDiv" style="margin-top:10px; display:none;">
-                                <label class="control-label" style="display:block; margin-bottom:5px;">选择用户：</label>
-                                <select id="receiveUserIds" name="receiveUserIds" class="form-control select2-multiple" multiple
-                                        placeholder="请选择接收通知的用户">
-                                    <!-- 渲染AssignUser列表：value=userId，显示=userName -->
-                                    <option th:each="user : ${user}"
-                                            th:value="${user.userId}"
-                                            th:text="${user.userName}"></option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
-                <button type="button" class="btn btn-primary" onclick="submitPublish()">发布通知</button>
+<div id="publishModal" style="display:none; padding:20px;">
+    <form id="form-publish" class="form-horizontal">
+        <div class="form-group">
+            <label class="col-sm-3 control-label">通知标题：</label>
+            <div class="col-sm-9">
+                <input type="text" name="title" class="form-control" placeholder="请输入标题" required>
             </div>
         </div>
-    </div>
+        <div class="form-group">
+            <label class="col-sm-3 control-label">消息类型：</label>
+            <div class="col-sm-9">
+                <select name="type" class="form-control">
+                    <option value="通知">系统通知</option>
+                    <option value="公告">团队公告</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-3 control-label">接收范围：</label>
+            <div class="col-sm-9">
+                <select name="scope" class="form-control" onchange="toggleUserSelect(this.value)">
+                    <option value="all">全员广播</option>
+                    <option value="specified">指定成员</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group" id="userSelectGroup" style="display:none;">
+            <label class="col-sm-3 control-label">选择成员：</label>
+            <div class="col-sm-9">
+                <input type="text" name="receiveUserIds" class="form-control" placeholder="请输入用户ID，逗号分隔 (例: 1,2,3)">
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-3 control-label">内容详情：</label>
+            <div class="col-sm-9">
+                <textarea name="content" class="form-control" rows="4" required></textarea>
+            </div>
+        </div>
+    </form>
 </div>
 
 <th:block th:include="include :: footer" />
-<!-- 引入select2组件JS -->
-<th:block th:include="include :: select2-js"/>
-<script th:inline="javascript">
+<script>
     var prefix = ctx + "system/message";
 
     $(function() {
-        var options = {
-            url: prefix + "/list",
-            modalName: "消息",
-            columns: [{
-                checkbox: true
-            },
-                {
-                    field: 'messageId',
-                    title: 'ID',
-                    visible: false
-                },
-                {
-                    field: 'title',
-                    title: '标题',
-                    formatter: function(value, row, index) {
-                        // 如果未读，加粗显示
-                        if (row.isRead == '0') {
-                            return '<span style="font-weight:bold; color:#ff0000;">[未读] ' + value + '</span>';
-                        }
-                        return '<span style="color:#999;">[已读] ' + value + '</span>';
-                    }
-                },
-                {
-                    field: 'content',
-                    title: '内容'
-                },
-                {
-                    field: 'createTime',
-                    title: '时间'
-                },
-                {
-                    title: '操作',
-                    align: 'center',
-                    formatter: function(value, row, index) {
-                        var actions = [];
-                        if (row.isRead == '0') {
-                            actions.push('<a class="btn btn-success btn-xs" href="javascript:void(0)" onclick="markRead(\'' + row.messageId + '\')"><i class="fa fa-check"></i> 标为已读</a> ');
-                        }
-                        return actions.join('');
-                    }
-                }]
-        };
-        $.table.init(options);
-
-        // 接收范围单选框切换事件（显示/隐藏指定用户选择框，修复select2挂载）
-        $("input[name='scope']").change(function() {
-            if ($(this).val() == 'specified') {
-                $("#userSelectDiv").show();
-                // 初始化select2组件：指定dropdownParent为弹窗，避免下拉框超出页面
-                $("#receiveUserIds").select2({
-                    placeholder: "请选择接收通知的用户",
-                    allowClear: true,
-                    language: "zh-CN",
-                    width: "100%",
-                    dropdownParent: $("#publishMessageModal") // 核心：下拉框挂载到弹窗内
-                });
-            } else {
-                $("#userSelectDiv").hide();
-                // 销毁select2，避免重复初始化
-                if ($("#receiveUserIds").data('select2')) {
-                    $("#receiveUserIds").select2('destroy');
-                }
-            }
-        });
+        loadMessages();
     });
 
-    // 原有方法：标为已读
-    function markRead(id) {
-        $.operate.post(prefix + "/read", { "messageId": id }, function(){
-            $.table.refresh();
-        });
-    }
-
-    // 原有方法：全部已读
-    function markReadAll() {
-        $.operate.post(prefix + "/readAll", {}, function(){
-            $.table.refresh();
-            $.modal.msgSuccess("所有消息已标记为已读");
-        });
-    }
-
-    // 新增：打开发布通知弹窗
-    function openPublishMessage() {
-        // 清空表单
-        $("#form-publish-message")[0].reset();
-        // 默认隐藏指定用户选择框
-        $("#userSelectDiv").hide();
-        // 销毁select2，避免残留
-        if ($("#receiveUserIds").data('select2')) {
-            $("#receiveUserIds").select2('destroy');
-        }
-        // 打开弹窗
-        $("#publishMessageModal").modal("show");
-    }
-
-    // 新增：提交发布通知（适配消息类型+默认未读）
-    function submitPublish() {
-        // 表单校验
-        var title = $("input[name='title']").val().trim();
-        var content = $("textarea[name='content']").val().trim();
-        var type = $("select[name='type']").val(); // 消息类型
-        var scope = $("input[name='scope']:checked").val();
-
-        if (!title) {
-            $.modal.msgWarning("请输入通知标题！");
-            return;
-        }
-        if (!content) {
-            $.modal.msgWarning("请输入通知内容！");
-            return;
-        }
-        if (!type) { // 校验消息类型
-            $.modal.msgWarning("请选择消息类型！");
-            return;
-        }
-        // 如果是指定用户，校验是否选择了用户
-        if (scope == 'specified') {
-            var userIds = $("#receiveUserIds").val() || [];
-            if (userIds.length == 0) {
-                $.modal.msgWarning("请选择接收通知的用户！");
-                return;
-            }
-        }
-
-        // 构造请求参数（无isRead，由后端默认赋值0）
-        var params = {
-            title: title,
-            content: content,
-            type: type, // 消息类型（1系统/2任务）
-            scope: scope
-        };
-        // 如果是指定用户，添加用户ID列表（逗号分隔）
-        if (scope == 'specified') {
-            params.receiveUserIds = $("#receiveUserIds").val().join(",");
-        }
-
-        // 提交发布请求
-        $.operate.post(prefix + "/publish", params, function(res) {
-            if (res.code === 0) {
-                $.modal.msgSuccess("通知发布成功！");
-                $("#publishMessageModal").modal("hide");
-                $.table.refresh(); // 刷新消息列表
+    // 1. 加载消息列表
+    function loadMessages() {
+        $.post(prefix + "/list", {}, function(res) {
+            var rows = res.rows;
+            var html = '';
+            if (!rows || rows.length === 0) {
+                html = '<div class="empty-state"><i class="fa fa-envelope-o fa-3x"></i><br>暂无消息</div>';
             } else {
-                $.modal.msgError("发布失败：" + res.msg);
+                html = rows.map(function(item) {
+                    var isRead = item.isRead === '1';
+                    var readClass = isRead ? '' : 'unread';
+                    var dot = isRead ? '' : '<span class="unread-dot"></span>';
+
+                    return `
+                    <div class="msg-item ${readClass}" onclick="readMessage(${item.messageId}, this)">
+                        <div class="msg-top">
+                            <div class="msg-title">
+                                ${dot} <span class="type-badge system">${item.type || '通知'}</span> ${item.title}
+                            </div>
+                            <div class="msg-time">${item.createTime}</div>
+                        </div>
+                        <div class="msg-body">${item.content}</div>
+                    </div>
+                    `;
+                }).join('');
+            }
+            $("#msgList").html(html);
+        });
+    }
+
+    // 2. 点击阅读
+    function readMessage(id, el) {
+        // 视觉上立即变已读
+        $(el).removeClass('unread').find('.unread-dot').remove();
+
+        // 发送后端
+        $.post(prefix + "/read", { messageId: id });
+
+        // 弹窗显示详情
+        var content = $(el).find('.msg-body').text();
+        var title = $(el).find('.msg-title').text().trim();
+        Swal.fire({
+            title: title,
+            text: content,
+            confirmButtonText: '关闭',
+            confirmButtonColor: '#0079bf'
+        });
+    }
+
+    // 3. 全部已读
+    function markAllRead() {
+        $.post(prefix + "/readAll", function(res) {
+            if (res.code === 0) {
+                Swal.fire({ icon: 'success', title: '操作成功', toast: true, position: 'top-end', timer: 1500, showConfirmButton: false });
+                loadMessages();
             }
         });
+    }
+
+    // 4. 打开发布窗口
+    function openPublishModal() {
+        layer.open({
+            type: 1,
+            title: '发布新通知',
+            area: ['600px', '450px'],
+            content: $('#publishModal'),
+            btn: ['立即发送', '取消'],
+            yes: function(index, layero) {
+                $.ajax({
+                    url: prefix + "/publish",
+                    type: "post",
+                    data: $('#form-publish').serialize(),
+                    success: function(res) {
+                        if (res.code === 0) {
+                            layer.close(index);
+                            Swal.fire('发送成功', res.msg, 'success');
+                            loadMessages();
+                        } else {
+                            Swal.fire('发送失败', res.msg, 'error');
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    function toggleUserSelect(val) {
+        if(val === 'specified') $('#userSelectGroup').show();
+        else $('#userSelectGroup').hide();
     }
 </script>
 </body>
