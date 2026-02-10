@@ -1,18 +1,14 @@
 # 项目相关配置
+# 项目相关配置
 ruoyi:
-  # 名称
-  name: RuoYi
+  # 名称 - 改为您的系统名称
+  name: Task Kanban
   # 版本
-  version: 4.8.2
+  version: 1.0.0
   # 版权年份
   copyrightYear: 2026
-  # 实例演示开关
-  demoEnabled: true
-  # 文件路径 示例（ Windows配置D:/ruoyi/uploadPath，Linux配置 /home/ruoyi/uploadPath）
-  profile: D:/ruoyi/uploadPath
-  # 获取ip地址开关
-  addressEnabled: false
-
+  # 实例演示开关 - 建议关闭，隐藏若依默认的演示菜单
+  demoEnabled: false
 # 开发环境配置
 server:
   # 服务器的HTTP端口，默认为80

@@ -1,88 +1,206 @@
 <!DOCTYPE html>
-<html lang="zh" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.pollix.at/thymeleaf/shiro">
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
 <head>
     <th:block th:include="include :: header('我的任务')" />
+    <style>
+        .my-card {
+            background: #fff;
+            border-radius: 6px;
+            border-left: 4px solid #1c84c6; /* 默认蓝色左边框 */
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+            padding: 15px;
+            position: relative;
+            transition: all 0.2s;
+        }
+        .my-card:hover { box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+
+        /* 状态样式区分 */
+        .status-doing { border-left-color: #1c84c6; } /* 进行中 */
+        .status-done { border-left-color: #1ab394; background: #fdfdfd; opacity: 0.8; } /* 已完成 */
+        .status-overdue { border-left-color: #ed5565; } /* 超期 */
+
+        .card-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .card-title { font-size: 15px; font-weight: bold; color: #333; }
+        .card-label { font-size: 11px; padding: 2px 6px; border-radius: 3px; background: #f0f0f0; color: #666; }
+
+        .progress-wrapper { height: 10px; background: #eee; border-radius: 5px; margin: 10px 0; overflow: hidden; }
+        .progress-inner { height: 100%; background: #1c84c6; width: 0%; transition: width 0.5s; }
+        .progress-text { font-size: 12px; color: #888; text-align: right; }
+
+        .btn-action { margin-left: 5px; }
+        .deadline-text { font-size: 12px; color: #666; }
+        .text-danger { color: #ed5565 !important; font-weight: bold; }
+    </style>
 </head>
 <body class="gray-bg">
-<div class="container-div">
-    <div class="row">
-        <div class="col-sm-12 search-collapse">
+<div class="wrapper wrapper-content animated fadeInRight">
+    <div class="ibox float-e-margins mb10">
+        <div class="ibox-content" style="padding: 15px 20px 5px 20px;">
             <form id="formId">
-                <div class="select-list">
-                    <ul>
-                        <li>
-                            标题：<input type="text" name="cardTitle"/>
-                        </li>
-                        <li>
-                            状态：
-                            <select name="status">
-                                <option value="">所有</option>
-                                <option value="0">进行中</option>
-                                <option value="1">已完成</option>
-                            </select>
-                        </li>
-                        <li>
-                            <a class="btn btn-primary btn-rounded btn-sm" onclick="$.table.search()"><i class="fa fa-search"></i> 搜索</a>
-                            <a class="btn btn-warning btn-rounded btn-sm" onclick="$.form.reset()"><i class="fa fa-refresh"></i> 重置</a>
-                        </li>
-                    </ul>
+                <div class="row">
+                    <div class="col-sm-3">
+                        <input type="text" class="form-control input-sm" name="cardTitle" placeholder="搜索任务标题...">
+                    </div>
+                    <div class="col-sm-2">
+                        <select name="status" class="form-control input-sm">
+                            <option value="">所有状态</option>
+                            <option value="0">进行中</option>
+                            <option value="1">已完成</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-7">
+                        <a class="btn btn-primary btn-sm btn-rounded" onclick="searchQuery()"><i class="fa fa-search"></i> 搜索</a>
+                        <a class="btn btn-default btn-sm btn-rounded" onclick="resetQuery()"><i class="fa fa-refresh"></i> 重置</a>
+                    </div>
                 </div>
             </form>
         </div>
+    </div>
 
-        <div class="col-sm-12 select-table table-striped">
-            <table id="bootstrap-table"></table>
-        </div>
+    <div class="row" id="myTaskContainer">
+    </div>
+
+    <div class="text-center m-b-lg">
+        <button class="btn btn-white btn-sm" id="btnMore" onclick="loadMore()">加载更多</button>
+        <div id="noMore" class="text-muted" style="display:none; margin-top:10px;">没有更多数据了</div>
     </div>
 </div>
+
 <th:block th:include="include :: footer" />
 <script th:inline="javascript">
     var prefix = ctx + "kanban/card";
+    var pageNum = 1;
+    var pageSize = 12;
+    var hasMore = true;
 
     $(function() {
-        var options = {
-            url: prefix + "/my/list",
-            updateUrl: prefix + "/edit/{id}",
-            modalName: "我的任务",
-            sortName: "deadline",
-            sortOrder: "asc",
-            columns: [
-                { field: 'cardTitle', title: '任务标题' },
-                { field: 'priority', title: '优先级', align: 'center', formatter: function(value) {
-                        return value == '0' ? '<span class="label label-danger">紧急</span>' : '普通';
-                    }},
-                { field: 'deadline', title: '截止时间', sortable: true, formatter: function(value, row) {
-                        if(!value) return '-';
-                        var date = value.substring(0,10);
-                        // 简单的超期判断
-                        if(new Date(value) < new Date() && row.status != '1') return '<span style="color:red">'+date+' (超期)</span>';
-                        return date;
-                    }},
-                { field: 'progress', title: '进度', align: 'center', width: '200', formatter: function(value) {
-                        var val = value || 0;
-                        return '<div class="progress progress-mini" style="margin-bottom:0"><div style="width: '+val+'%;" class="progress-bar"></div></div>' + val + '%';
-                    }},
-                { field: 'status', title: '状态', align: 'center', formatter: function(value) {
-                        if(value == '1') return '<span class="badge badge-primary">已完成</span>';
-                        return '<span class="badge badge-warning">进行中</span>';
-                    }},
-                { title: '操作', align: 'center', formatter: function(value, row, index) {
-                        var actions = [];
-                        actions.push('<a class="btn btn-success btn-xs" href="javascript:void(0)" onclick="$.operate.edit(\'' + row.cardId + '\')"><i class="fa fa-edit"></i> 更新进度</a> ');
-                        if (row.status != '1') {
-                            actions.push('<a class="btn btn-primary btn-xs" href="javascript:void(0)" onclick="finishTask(\'' + row.cardId + '\')"><i class="fa fa-check"></i> 完成</a>');
-                        }
-                        return actions.join('');
-                    }}
-            ]
-        };
-        $.table.init(options);
+        loadData(true);
     });
 
+    function searchQuery() {
+        pageNum = 1;
+        hasMore = true;
+        loadData(true);
+    }
+
+    function resetQuery() {
+        $("#formId")[0].reset();
+        searchQuery();
+    }
+
+    function loadMore() {
+        if(hasMore) {
+            pageNum++;
+            loadData(false);
+        }
+    }
+
+    function loadData(isReset) {
+        if(isReset) {
+            $("#myTaskContainer").html('');
+            $("#btnMore").show();
+            $("#noMore").hide();
+        }
+
+        var data = $("#formId").serializeArray();
+        data.push({name: "pageNum", value: pageNum});
+        data.push({name: "pageSize", value: pageSize});
+
+        $.post(prefix + "/my/list", data, function(res) {
+            if (res.code === 0) {
+                renderTasks(res.rows);
+                if (res.rows.length < pageSize) {
+                    hasMore = false;
+                    $("#btnMore").hide();
+                    $("#noMore").show();
+                }
+            } else {
+                $.modal.msgError(res.msg);
+            }
+        });
+    }
+
+    function renderTasks(rows) {
+        if (!rows || rows.length === 0) {
+            if (pageNum === 1) $("#myTaskContainer").html('<div class="col-sm-12 text-center text-muted p-lg">暂无任务</div>');
+            return;
+        }
+
+        var html = "";
+        var now = new Date();
+
+        $.each(rows, function(i, card) {
+            var progress = card.progress || 0;
+            var isDone = card.status === '1';
+
+            // 计算状态样式
+            var statusClass = "status-doing";
+            var deadlineHtml = '<span class="deadline-text"><i class="fa fa-calendar"></i> 无截止</span>';
+
+            if (isDone) {
+                statusClass = "status-done";
+            } else if (card.deadline) {
+                var dDate = new Date(card.deadline.replace(/-/g, "/")); // 兼容性替换
+                var isOverdue = dDate < now;
+                var dateStr = card.deadline.substring(0, 10);
+                if (isOverdue) {
+                    statusClass = "status-overdue";
+                    deadlineHtml = `<span class="deadline-text text-danger"><i class="fa fa-warning"></i> ${dateStr} (已超期)</span>`;
+                } else {
+                    deadlineHtml = `<span class="deadline-text"><i class="fa fa-clock-o"></i> ${dateStr}</span>`;
+                }
+            }
+
+            var priorityLabel = "";
+            if (card.priority == '0') priorityLabel = '<span class="label label-danger">紧急</span>';
+            else if (card.priority == '1') priorityLabel = '<span class="label label-warning">高</span>';
+
+            var btns = "";
+            if (!isDone) {
+                btns = `
+                <button class="btn btn-white btn-xs btn-action" onclick="$.operate.edit('${card.cardId}')">更新进度</button>
+                <button class="btn btn-primary btn-xs btn-action" onclick="finishTask(${card.cardId})"><i class="fa fa-check"></i> 完成</button>
+                `;
+            } else {
+                btns = `<span class="label label-primary">已完成</span>`;
+            }
+
+            html += `
+            <div class="col-sm-6 col-md-4 animated fadeInUp">
+                <div class="my-card ${statusClass}">
+                    <div class="card-header-row">
+                        <div class="card-title">${card.cardTitle}</div>
+                        <div>${priorityLabel}</div>
+                    </div>
+
+                    <div class="progress-wrapper">
+                        <div class="progress-inner" style="width: ${progress}%"></div>
+                    </div>
+                    <div class="row m-b-sm">
+                        <div class="col-xs-6">${deadlineHtml}</div>
+                        <div class="col-xs-6 progress-text">进度: ${progress}%</div>
+                    </div>
+
+                    <div class="text-right" style="border-top:1px dashed #eee; padding-top:10px;">
+                        ${btns}
+                    </div>
+                </div>
+            </div>
+            `;
+        });
+        $("#myTaskContainer").append(html);
+    }
+
     function finishTask(cardId) {
-        $.modal.confirm("确定已完成该任务？", function() {
-            $.operate.post(prefix + "/complete", { "cardId": cardId }, function(){
-                $.table.refresh();
+        $.modal.confirm("确定任务已完成？", function() {
+            $.operate.post(prefix + "/complete", { "cardId": cardId }, function(res) {
+                if(res.code === 0) {
+                    $.modal.msgSuccess("任务完成！");
+                    searchQuery(); // 刷新列表
+                } else {
+                    $.modal.msgError(res.msg);
+                }
             });
         });
     }
