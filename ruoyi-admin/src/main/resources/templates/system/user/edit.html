@@ -77,16 +77,15 @@
                 </div>
             </div>
             <div class="row">
-                <div class="col-sm-6">
+                <div class="col-sm-12">
                     <div class="form-group">
-                        <label class="col-sm-4 control-label">岗位：</label>
-                        <div class="col-sm-8">
-                            <select id="post" class="form-control select2-multiple" multiple>
-								<option th:each="post:${posts}" th:value="${post.postId}" th:text="${post.postName}" th:selected="${post.flag}" th:disabled="${post.status == '1'}"></option>
-							</select>
+                        <div class="col-xs-4">
+                            <input type="hidden" id="post" name="post" value="13" />
+                            <span class="form-control-static"></span>
                         </div>
                     </div>
                 </div>
+            </div>
                 <div class="col-sm-6">
                     <div class="form-group">
                         <label class="col-sm-4 control-label">用户性别：</label>

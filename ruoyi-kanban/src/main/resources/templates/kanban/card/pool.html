@@ -90,7 +90,8 @@
                     <div class="col-sm-9 text-right">
                         <a class="btn btn-primary btn-rounded btn-sm" onclick="searchQuery()"><i class="fa fa-search"></i> 搜索</a>
                         <a class="btn btn-warning btn-rounded btn-sm" onclick="resetQuery()"><i class="fa fa-refresh"></i> 重置</a>
-                        <a class="btn btn-success btn-rounded btn-sm" onclick="$.operate.add()" th:if="${isAdmin}">
+                        <!-- 修复：给新建按钮指定明确的新增路径 -->
+                        <a class="btn btn-success btn-rounded btn-sm" onclick="addTask()" th:if="${isAdmin}">
                             <i class="fa fa-plus"></i> 新建任务
                         </a>
                     </div>
@@ -231,8 +232,22 @@
         $("#btnNext").prop("disabled", currentPage >= totalPage);
     }
 
+    /* --- 新增：新建任务的核心方法 --- */
+    function addTask() {
+        var url = prefix + '/add';
+        var index = layer.open({
+            type: 2,
+            title: "新增任务",
+            content: url,
+            area: ['800px', '500px'],
+            end: function() {
+                currentPage = 1;
+                loadData();
+            }
+        });
+        $.modal.index = index;
+    }
     /* --- 业务逻辑 --- */
-
     function claimTask(cardId) {
         $.modal.confirm("确定要认领这个任务吗？", function() {
             $.operate.post(prefix + "/claim", { "cardId": cardId }, function(res) {

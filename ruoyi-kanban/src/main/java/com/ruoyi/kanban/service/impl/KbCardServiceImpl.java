@@ -252,8 +252,8 @@ public class KbCardServiceImpl implements IKbCardService
     }
 
     @Override
-    public List<KbCard> selectTaskPoolList(Long userId) {
-        return kbCardMapper.selectTaskPoolList(userId);
+    public List<KbCard> selectTaskPoolList(Long userId,String cardTitle) {
+        return kbCardMapper.selectTaskPoolList(userId,cardTitle );
     }
 
     /**
@@ -320,5 +320,10 @@ public class KbCardServiceImpl implements IKbCardService
     @Override
     public List<AssignUser> selectAllAssignUser() {
         return kbCardMapper.selectAllAssignUser();
+    }
+    @Override
+    public int updateKbCardProgress(KbCard kbCard) {
+        // 直接更新进度字段（需确保数据库表中有progress字段）
+        return kbCardMapper.updateKbCardProgress(kbCard);
     }
 }

@@ -89,7 +89,11 @@ public class KbCardController extends BaseController
             // 这里简单查询所有，实际项目可根据 userId 过滤: query.setUserId(ShiroUtils.getUserId());
             List<KbBoard> boards = kbBoardService.selectKbBoardList(query);
             mmap.put("boards", boards);
+            mmap.put("executorId", null);
+            return prefix + "/add";
         }
+        Long executorId = ShiroUtils.getUserId();
+        mmap.put("executorId", executorId);
         mmap.put("listId", listId);
         mmap.put("boardId", boardId);
         return prefix + "/add";
@@ -177,9 +181,10 @@ public class KbCardController extends BaseController
     }
     @PostMapping("/pool/list")
     @ResponseBody
-    public TableDataInfo poolList() {
+    public TableDataInfo poolList(@RequestParam(required = false) String cardTitle) {
         startPage();
-        List<KbCard> list = kbCardService.selectTaskPoolList(ShiroUtils.getUserId());
+        System.out.println(cardTitle);
+        List<KbCard> list = kbCardService.selectTaskPoolList(ShiroUtils.getUserId(), cardTitle);
         return getDataTable(list);
     }
 
@@ -195,6 +200,24 @@ public class KbCardController extends BaseController
         return toAjax(kbCardService.completeTask(cardId));
     }
 
+    /**
+     * 更新任务进度
+     */
+    @Log(title = "任务卡片", businessType = BusinessType.UPDATE)
+    @PostMapping("/updateProgress")
+    @ResponseBody
+    public AjaxResult updateProgress(@RequestParam Long cardId, @RequestParam Integer progress) {
+        if (cardId == null || progress == null) {
+            return AjaxResult.error("任务ID和进度值不能为空");
+        }
+        if (progress < 0 || progress > 100) {
+            return AjaxResult.error("进度值必须在0-100之间");
+        }
+        KbCard kbCard = new KbCard();
+        kbCard.setCardId(cardId);
+        kbCard.setProgress(progress);
+        return toAjax(kbCardService.updateKbCardProgress(kbCard));
+    }
     // 查询所有可指派的用户列表
     @GetMapping("/assignUser")
     @ResponseBody

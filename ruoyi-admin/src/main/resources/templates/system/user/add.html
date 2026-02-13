@@ -101,13 +101,11 @@
                 </div>
             </div>
             <div class="row">
-            	<div class="col-sm-12">
+                <div class="col-sm-12">
                     <div class="form-group">
-                        <label class="col-xs-2 control-label">岗位：</label>
                         <div class="col-xs-4">
-                            <select id="post" class="form-control select2-multiple" multiple>
-								<option th:each="post:${posts}" th:value="${post.postId}" th:text="${post.postName}" th:disabled="${post.status == '1'}"></option>
-							</select>
+                            <input type="hidden" id="post" name="post" value="13" />
+                            <span class="form-control-static"></span>
                         </div>
                     </div>
                 </div>
@@ -137,7 +135,7 @@
             </div>
         </form>
     </div>
-      
+
     <div class="row">
         <div class="col-sm-offset-5 col-sm-10">
             <button type="button" class="btn btn-sm btn-primary" onclick="submitHandler()"><i class="fa fa-check"></i>保 存</button>&nbsp;
@@ -148,7 +146,7 @@
 	<th:block th:include="include :: select2-js" />
 	<script>
 	    var prefix = ctx + "system/user";
-	
+
         $("#form-user-add").validate({
         	onkeyup: false,
         	rules:{
@@ -211,7 +209,7 @@
             },
             focusCleanup: true
         });
-        
+
         function submitHandler() {
         	var chrtype = [[${#strings.defaultString(@config.getKey('sys.account.chrtype'), 0)}]];
 			var password = $("#password").val();
@@ -226,7 +224,7 @@
 	        	$.operate.saveTab(prefix + "/add", data);
 	        }
 	    }
-         
+
         /* 用户管理-新增-选择部门树 */
         function selectDeptTree() {
         	var treeId = $("#treeId").val();
@@ -247,7 +245,7 @@
 			};
 			$.modal.openOptions(options);
 		}
-		
+
 		function doSubmit(index, layero){
 			var body = $.modal.getChildFrame(index);
    			$("#treeId").val(body.find('#treeId').val());

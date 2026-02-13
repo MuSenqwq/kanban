@@ -94,7 +94,7 @@ public class KbBoardController extends BaseController
     public String edit(@PathVariable("boardId") Long boardId, ModelMap mmap)
     {
         KbBoard kbBoard = kbBoardService.selectKbBoardByBoardId(boardId);
-        mmap.put("kbBoard", kbBoard);
+        mmap.put("board", kbBoard);
         return prefix + "/edit";
     }
 
@@ -106,12 +106,6 @@ public class KbBoardController extends BaseController
     @ResponseBody
     public AjaxResult editSave(KbBoard kbBoard)
     {
-        System.out.println(2);
-        if(kbBoard!=null){
-            System.out.println(3);
-        }else {
-            System.out.println(1);
-        }
         return toAjax(kbBoardService.updateKbBoard(kbBoard));
     }
 

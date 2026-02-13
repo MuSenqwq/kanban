@@ -1,36 +1,121 @@
 <!DOCTYPE html>
 <html lang="zh" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:include="include :: header('我的任务')" />
+    <th:block th:include="include :: header('我的任务')"/>
     <style>
         .my-card {
             background: #fff;
             border-radius: 6px;
             border-left: 4px solid #1c84c6; /* 默认蓝色左边框 */
-            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
             margin-bottom: 15px;
             padding: 15px;
             position: relative;
             transition: all 0.2s;
         }
-        .my-card:hover { box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+
+        .my-card:hover {
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
 
         /* 状态样式区分 */
-        .status-doing { border-left-color: #1c84c6; } /* 进行中 */
-        .status-done { border-left-color: #1ab394; background: #fdfdfd; opacity: 0.8; } /* 已完成 */
-        .status-overdue { border-left-color: #ed5565; } /* 超期 */
+        .status-doing {
+            border-left-color: #1c84c6;
+        }
 
-        .card-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .card-title { font-size: 15px; font-weight: bold; color: #333; }
-        .card-label { font-size: 11px; padding: 2px 6px; border-radius: 3px; background: #f0f0f0; color: #666; }
+        /* 进行中 */
+        .status-done {
+            border-left-color: #1ab394;
+            background: #fdfdfd;
+            opacity: 0.8;
+        }
 
-        .progress-wrapper { height: 10px; background: #eee; border-radius: 5px; margin: 10px 0; overflow: hidden; }
-        .progress-inner { height: 100%; background: #1c84c6; width: 0%; transition: width 0.5s; }
-        .progress-text { font-size: 12px; color: #888; text-align: right; }
+        /* 已完成 */
+        .status-overdue {
+            border-left-color: #ed5565;
+        }
 
-        .btn-action { margin-left: 5px; }
-        .deadline-text { font-size: 12px; color: #666; }
-        .text-danger { color: #ed5565 !important; font-weight: bold; }
+        /* 超期 */
+
+        .card-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .card-label {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .progress-wrapper {
+            height: 10px;
+            background: #eee;
+            border-radius: 5px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+
+        .progress-inner {
+            height: 100%;
+            background: #1c84c6;
+            width: 0%;
+            transition: width 0.5s;
+        }
+
+        .progress-text {
+            font-size: 12px;
+            color: #888;
+            text-align: right;
+        }
+
+        .btn-action {
+            margin-left: 5px;
+        }
+
+        .deadline-text {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .text-danger {
+            color: #ed5565 !important;
+            font-weight: bold;
+        }
+
+        /* 弹窗样式优化 */
+        .modal-progress-content {
+            padding: 20px;
+        }
+        .progress-input-group {
+            margin: 15px 0;
+        }
+        .progress-input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        .progress-input-group input {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #e6e6e6;
+            border-radius: 4px;
+        }
+        .progress-slider {
+            width: 100%;
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body class="gray-bg">
@@ -50,8 +135,10 @@
                         </select>
                     </div>
                     <div class="col-sm-7">
-                        <a class="btn btn-primary btn-sm btn-rounded" onclick="searchQuery()"><i class="fa fa-search"></i> 搜索</a>
-                        <a class="btn btn-default btn-sm btn-rounded" onclick="resetQuery()"><i class="fa fa-refresh"></i> 重置</a>
+                        <a class="btn btn-primary btn-sm btn-rounded" onclick="searchQuery()"><i
+                                class="fa fa-search"></i> 搜索</a>
+                        <a class="btn btn-default btn-sm btn-rounded" onclick="resetQuery()"><i
+                                class="fa fa-refresh"></i> 重置</a>
                     </div>
                 </div>
             </form>
@@ -67,15 +154,61 @@
     </div>
 </div>
 
-<th:block th:include="include :: footer" />
+<!-- 进度修改弹窗（新增） -->
+<div class="modal fade" id="progressModal" tabindex="-1" role="dialog" aria-labelledby="progressModalLabel">
+    <div class="modal-dialog" role="document" style="width: 400px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="progressModalLabel">更新任务进度</h4>
+            </div>
+            <div class="modal-body modal-progress-content">
+                <input type="hidden" id="modalCardId">
+                <div class="progress-input-group">
+                    <label for="taskTitle">任务标题</label>
+                    <input type="text" id="taskTitle" readonly>
+                </div>
+                <div class="progress-input-group">
+                    <label for="progressValue">当前进度：<span id="progressPercent">0</span>%</label>
+                    <input type="range" min="0" max="100" class="progress-slider" id="progressValue">
+                    <input type="number" min="0" max="100" id="progressInput" placeholder="输入进度百分比">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveProgress()">保存进度</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block th:include="include :: footer"/>
 <script th:inline="javascript">
+    // 修复ctx可能未定义的问题，兼容Thymeleaf上下文路径
+    var ctx = [[@{/}]] || window.ctx || "";
     var prefix = ctx + "kanban/card";
     var pageNum = 1;
     var pageSize = 12;
     var hasMore = true;
 
-    $(function() {
+    $(function () {
         loadData(true);
+
+        // 进度滑块和输入框联动（新增）
+        $("#progressValue").on("input", function() {
+            var val = $(this).val();
+            $("#progressPercent").text(val);
+            $("#progressInput").val(val);
+        });
+        $("#progressInput").on("input", function() {
+            var val = $(this).val();
+            // 限制范围0-100
+            if (val < 0) val = 0;
+            if (val > 100) val = 100;
+            $("#progressPercent").text(val);
+            $("#progressValue").val(val);
+            $(this).val(val);
+        });
     });
 
     function searchQuery() {
@@ -90,14 +223,14 @@
     }
 
     function loadMore() {
-        if(hasMore) {
+        if (hasMore) {
             pageNum++;
             loadData(false);
         }
     }
 
     function loadData(isReset) {
-        if(isReset) {
+        if (isReset) {
             $("#myTaskContainer").html('');
             $("#btnMore").show();
             $("#noMore").hide();
@@ -107,7 +240,7 @@
         data.push({name: "pageNum", value: pageNum});
         data.push({name: "pageSize", value: pageSize});
 
-        $.post(prefix + "/my/list", data, function(res) {
+        $.post(prefix + "/my/list", data, function (res) {
             if (res.code === 0) {
                 renderTasks(res.rows);
                 if (res.rows.length < pageSize) {
@@ -130,7 +263,7 @@
         var html = "";
         var now = new Date();
 
-        $.each(rows, function(i, card) {
+        $.each(rows, function (i, card) {
             var progress = card.progress || 0;
             var isDone = card.status === '1';
 
@@ -146,9 +279,10 @@
                 var dateStr = card.deadline.substring(0, 10);
                 if (isOverdue) {
                     statusClass = "status-overdue";
-                    deadlineHtml = `<span class="deadline-text text-danger"><i class="fa fa-warning"></i> ${dateStr} (已超期)</span>`;
+                    // 修复模板字符串冲突，改用字符串拼接
+                    deadlineHtml = '<span class="deadline-text text-danger"><i class="fa fa-warning"></i> ' + dateStr + ' (已超期)</span>';
                 } else {
-                    deadlineHtml = `<span class="deadline-text"><i class="fa fa-clock-o"></i> ${dateStr}</span>`;
+                    deadlineHtml = '<span class="deadline-text"><i class="fa fa-clock-o"></i> ' + dateStr + '</span>';
                 }
             }
 
@@ -158,44 +292,89 @@
 
             var btns = "";
             if (!isDone) {
+                // 修改：点击打开弹窗，传递完整的card对象
                 btns = `
-                <button class="btn btn-white btn-xs btn-action" onclick="$.operate.edit('${card.cardId}')">更新进度</button>
-                <button class="btn btn-primary btn-xs btn-action" onclick="finishTask(${card.cardId})"><i class="fa fa-check"></i> 完成</button>
-                `;
+    <button class="btn btn-white btn-xs btn-action" onclick="openProgressModal(${JSON.stringify(card).replace(/"/g, '&quot;')})">更新进度</button>
+    <button class="btn btn-primary btn-xs btn-action" onclick="finishTask(${card.cardId})"><i class="fa fa-check"></i> 完成</button>
+    `;
             } else {
                 btns = `<span class="label label-primary">已完成</span>`;
             }
 
-            html += `
-            <div class="col-sm-6 col-md-4 animated fadeInUp">
-                <div class="my-card ${statusClass}">
-                    <div class="card-header-row">
-                        <div class="card-title">${card.cardTitle}</div>
-                        <div>${priorityLabel}</div>
-                    </div>
-
-                    <div class="progress-wrapper">
-                        <div class="progress-inner" style="width: ${progress}%"></div>
-                    </div>
-                    <div class="row m-b-sm">
-                        <div class="col-xs-6">${deadlineHtml}</div>
-                        <div class="col-xs-6 progress-text">进度: ${progress}%</div>
-                    </div>
-
-                    <div class="text-right" style="border-top:1px dashed #eee; padding-top:10px;">
-                        ${btns}
-                    </div>
-                </div>
-            </div>
-            `;
+            // 修复模板字符串冲突，改用字符串拼接
+            html +=
+                '<div class="col-sm-6 col-md-4 animated fadeInUp">' +
+                '<div class="my-card ' + statusClass + '">' +
+                '<div class="card-header-row">' +
+                '<div class="card-title">' + card.cardTitle + '</div>' +
+                '<div>' + priorityLabel + '</div>' +
+                '</div>' +
+                '<div class="progress-wrapper">' +
+                '<div class="progress-inner" style="width: ' + progress + '%"></div>' +
+                '</div>' +
+                '<div class="row m-b-sm">' +
+                '<div class="col-xs-6">' + deadlineHtml + '</div>' +
+                '<div class="col-xs-6 progress-text">进度: ' + progress + '%</div>' +
+                '</div>' +
+                '<div class="text-right" style="border-top:1px dashed #eee; padding-top:10px;">' +
+                btns +
+                '</div>' +
+                '</div>' +
+                '</div>';
         });
         $("#myTaskContainer").append(html);
     }
 
+    // 打开进度修改弹窗（核心新增）
+    function openProgressModal(card) {
+        // 填充弹窗数据
+        $("#modalCardId").val(card.cardId);
+        $("#taskTitle").val(card.cardTitle);
+        var progress = card.progress || 0;
+        $("#progressValue").val(progress);
+        $("#progressInput").val(progress);
+        $("#progressPercent").text(progress);
+
+        // 显示弹窗
+        $("#progressModal").modal("show");
+    }
+
+    // 保存进度（核心新增）
+    function saveProgress() {
+        var cardId = $("#modalCardId").val();
+        var progress = $("#progressValue").val();
+
+        // 参数校验
+        if (!cardId) {
+            $.modal.msgWarning("任务ID不能为空！");
+            return;
+        }
+        if (progress < 0 || progress > 100) {
+            $.modal.msgWarning("进度值必须在0-100之间！");
+            return;
+        }
+
+        // 提交进度更新
+        $.post(prefix + "/updateProgress", {
+            "cardId": cardId,
+            "progress": progress
+        }, function (res) {
+            if (res.code === 0) {
+                $.modal.msgSuccess("进度更新成功！");
+                $("#progressModal").modal("hide");
+                searchQuery(); // 刷新任务列表
+            } else {
+                $.modal.msgError(res.msg);
+            }
+        }).fail(function() {
+            $.modal.msgError("网络错误，进度更新失败！");
+        });
+    }
+
     function finishTask(cardId) {
-        $.modal.confirm("确定任务已完成？", function() {
-            $.operate.post(prefix + "/complete", { "cardId": cardId }, function(res) {
-                if(res.code === 0) {
+        $.modal.confirm("确定任务已完成？", function () {
+            $.operate.post(prefix + "/complete", {"cardId": cardId}, function (res) {
+                if (res.code === 0) {
                     $.modal.msgSuccess("任务完成！");
                     searchQuery(); // 刷新列表
                 } else {

@@ -122,14 +122,18 @@
 
     <select id="selectTaskPoolList" resultMap="KbCardResult">
         SELECT DISTINCT c.* FROM kb_card c
-                                     LEFT JOIN kb_board b ON c.board_id = b.board_id
-                                     LEFT JOIN kb_board_member m ON c.board_id = m.board_id
+        LEFT JOIN kb_board b ON c.board_id = b.board_id
+        LEFT JOIN kb_board_member m ON c.board_id = m.board_id
         WHERE (c.executor_id IS NULL OR c.executor_id = 0)
-          AND c.status != '2' AND (
-              b.user_id = #{userId}
-           OR m.user_id = #{userId}
-           OR c.create_by = (SELECT login_name FROM sys_user WHERE user_id = #{userId})
-            )
+        AND c.status != '2' AND (
+        b.user_id = #{userId}
+        OR m.user_id = #{userId}
+        OR c.create_by = (SELECT login_name FROM sys_user WHERE user_id = #{userId})
+        )
+        <!-- 仅新增以下模糊查询条件 -->
+        <if test="cardTitle != null and cardTitle != ''">
+            AND c.card_title LIKE CONCAT('%', #{cardTitle}, '%')
+        </if>
         ORDER BY c.create_time DESC
     </select>
 
@@ -181,5 +185,9 @@
         where list_id = #{listId}
         order by order_num asc, card_id asc
     </select>
-
+    <update id="updateKbCardProgress" parameterType="com.ruoyi.kanban.domain.KbCard">
+        UPDATE kb_card
+        SET progress = #{progress}
+        WHERE card_id = #{cardId}
+    </update>
 </mapper>

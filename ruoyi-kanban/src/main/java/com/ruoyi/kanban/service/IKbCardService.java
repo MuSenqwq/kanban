@@ -34,7 +34,7 @@ public interface IKbCardService
     public int changeCardOrder(Long cardId, Long listId, String sortOrder, Long fromListId, String fromSortOrder);
 
     // 查询待认领任务列表
-    public List<KbCard> selectTaskPoolList(Long userId);
+    public List<KbCard> selectTaskPoolList(Long userId,String cardTitle);
 
     // 认领任务
     public int claimTask(Long cardId, Long userId);
@@ -44,4 +44,10 @@ public interface IKbCardService
 
     // 查询指派名单
     public List<AssignUser> selectAllAssignUser();
+    /**
+     * 更新任务进度
+     * @param kbCard 任务卡片（包含cardId和progress）
+     * @return 影响行数
+     */
+    int updateKbCardProgress(KbCard kbCard);
 }

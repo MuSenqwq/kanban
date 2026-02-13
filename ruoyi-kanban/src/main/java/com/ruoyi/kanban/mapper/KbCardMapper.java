@@ -5,6 +5,7 @@ import java.util.Map;
 
 import com.ruoyi.kanban.domain.AssignUser;
 import com.ruoyi.kanban.domain.KbCard;
+import org.apache.ibatis.annotations.Param;
 
 public interface KbCardMapper
 {
@@ -16,7 +17,8 @@ public interface KbCardMapper
     public int deleteKbCardByCardIds(String[] cardIds);
 
     // 新增：任务池查询
-    public List<KbCard> selectTaskPoolList(Long userId);
+
+    List<KbCard> selectTaskPoolList( @Param("userId") Long userId, @Param("cardTitle") String cardTitle);
 
     // 之前统计相关的接口
     public Map<String, Object> selectUserTaskStats(Long userId);
@@ -29,4 +31,10 @@ public interface KbCardMapper
      * [新增] 查询某列下卡片ID（用于服务端兜底重排 order_num）
      */
     public List<Long> selectCardIdsByListId(Long listId);
+    /**
+     * 更新任务进度
+     * @param kbCard 任务卡片
+     * @return 影响行数
+     */
+    int updateKbCardProgress(KbCard kbCard);
 }

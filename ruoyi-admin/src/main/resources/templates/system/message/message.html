@@ -2,57 +2,195 @@
 <html lang="zh" xmlns:th="http://www.thymeleaf.org" xmlns:shiro="http://www.pollix.at/thymeleaf/shiro">
 <head>
     <th:block th:include="include :: header('我的消息')" />
+    <!-- 引入Select2插件（多选下拉框美化） -->
+    <link href="https://cdn.bootcdn.net/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet">
+    <script src="https://cdn.bootcdn.net/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        body { background-color: #f4f5f7; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+        body {
+            background-color: #f4f5f7;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
 
-        .msg-layout { display: flex; height: 100%; max-width: 1200px; margin: 0 auto; width: 100%; padding: 20px; gap: 20px; }
+        .msg-layout {
+            display: flex;
+            height: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 20px;
+            gap: 20px;
+        }
 
         /* 左侧侧边栏 */
-        .msg-sidebar { width: 240px; background: #fff; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .sidebar-btn {
-            padding: 12px 15px; border-radius: 8px; color: #5e6c84; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 10px; font-weight: 500;
+        .msg-sidebar {
+            width: 240px;
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
-        .sidebar-btn:hover { background: #ebecf0; color: #172b4d; }
-        .sidebar-btn.active { background: #e6f7ff; color: #0079bf; font-weight: 600; }
-        .sidebar-btn i { width: 20px; text-align: center; }
+        .sidebar-btn {
+            padding: 12px 15px;
+            border-radius: 8px;
+            color: #5e6c84;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 500;
+        }
+        .sidebar-btn:hover {
+            background: #ebecf0;
+            color: #172b4d;
+        }
+        .sidebar-btn.active {
+            background: #e6f7ff;
+            color: #0079bf;
+            font-weight: 600;
+        }
+        .sidebar-btn i {
+            width: 20px;
+            text-align: center;
+        }
 
         .btn-compose {
-            background: #0079bf; color: #fff; text-align: center; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; margin-bottom: 10px; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,121,191,0.2);
+            background: #0079bf;
+            color: #fff;
+            text-align: center;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px rgba(0,121,191,0.2);
         }
-        .btn-compose:hover { background: #005a8e; transform: translateY(-1px); }
+        .btn-compose:hover {
+            background: #005a8e;
+            transform: translateY(-1px);
+        }
 
         /* 右侧消息列表 */
-        .msg-content { flex: 1; background: #fff; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .msg-content {
+            flex: 1;
+            background: #fff;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
 
-        .msg-header { padding: 15px 25px; border-bottom: 1px solid #ebecf0; display: flex; justify-content: space-between; align-items: center; height: 60px; }
-        .header-title { font-size: 16px; font-weight: 700; color: #172b4d; }
+        .msg-header {
+            padding: 15px 25px;
+            border-bottom: 1px solid #ebecf0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60px;
+        }
+        .header-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #172b4d;
+        }
 
-        .msg-list-container { flex: 1; overflow-y: auto; padding: 0; }
+        .msg-list-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+        }
         .msg-list-container::-webkit-scrollbar { width: 6px; }
         .msg-list-container::-webkit-scrollbar-thumb { background: #dfe1e6; border-radius: 3px; }
 
         .msg-item {
-            padding: 20px 25px; border-bottom: 1px solid #f4f5f7; cursor: pointer; transition: background 0.1s; position: relative;
+            padding: 20px 25px;
+            border-bottom: 1px solid #f4f5f7;
+            cursor: pointer;
+            transition: background 0.1s;
+            position: relative;
         }
         .msg-item:hover { background: #fafbfc; }
         .msg-item.unread { background: #fff; }
         .msg-item.unread::before {
-            content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #0079bf;
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: #0079bf;
         }
 
-        .msg-top { display: flex; justify-content: space-between; margin-bottom: 6px; }
-        .msg-title { font-size: 15px; font-weight: 600; color: #172b4d; display: flex; align-items: center; gap: 8px; }
-        .unread-dot { width: 8px; height: 8px; background: #0079bf; border-radius: 50%; display: inline-block; }
+        .msg-top {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+        .msg-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #172b4d;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .unread-dot {
+            width: 8px;
+            height: 8px;
+            background: #0079bf;
+            border-radius: 50%;
+            display: inline-block;
+        }
 
-        .msg-time { font-size: 12px; color: #97a0af; }
-        .msg-body { font-size: 14px; color: #5e6c84; line-height: 1.5; white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .msg-time {
+            font-size: 12px;
+            color: #97a0af;
+        }
+        .msg-body {
+            font-size: 14px;
+            color: #5e6c84;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
 
-        .empty-state { text-align: center; padding: 60px; color: #97a0af; }
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            color: #97a0af;
+        }
 
         /* 标签 */
-        .type-badge { font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #ebecf0; color: #5e6c84; font-weight: normal; }
-        .type-badge.system { background: #deebff; color: #0747a6; }
+        .type-badge {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #ebecf0;
+            color: #5e6c84;
+            font-weight: normal;
+        }
+        .type-badge.system {
+            background: #deebff;
+            color: #0747a6;
+        }
+
+        /* Select2下拉框样式适配 */
+        .select2-container { width: 100% !important; }
+        .select2-selection--multiple { min-height: 34px !important; }
+        .select2-results__option { padding: 6px 12px !important; }
     </style>
 </head>
 <body class="gray-bg">
@@ -81,6 +219,7 @@
     </div>
 </div>
 
+<!-- 发布通知弹窗 -->
 <div id="publishModal" style="display:none; padding:20px;">
     <form id="form-publish" class="form-horizontal">
         <div class="form-group">
@@ -93,8 +232,8 @@
             <label class="col-sm-3 control-label">消息类型：</label>
             <div class="col-sm-9">
                 <select name="type" class="form-control">
-                    <option value="通知">系统通知</option>
-                    <option value="公告">团队公告</option>
+                    <option value="1">系统通知</option>
+                    <option value="2">团队公告</option>
                 </select>
             </div>
         </div>
@@ -107,16 +246,20 @@
                 </select>
             </div>
         </div>
+        <!-- 多选下拉框选择成员 -->
         <div class="form-group" id="userSelectGroup" style="display:none;">
             <label class="col-sm-3 control-label">选择成员：</label>
             <div class="col-sm-9">
-                <input type="text" name="receiveUserIds" class="form-control" placeholder="请输入用户ID，逗号分隔 (例: 1,2,3)">
+                <select name="receiveUserIds" class="form-control" multiple="multiple" id="userSelect">
+                    <!-- Thymeleaf循环渲染用户列表 -->
+                    <option th:each="u : ${user}" th:value="${u.userId}" th:text="${u.userName}"></option>
+                </select>
             </div>
         </div>
         <div class="form-group">
             <label class="col-sm-3 control-label">内容详情：</label>
             <div class="col-sm-9">
-                <textarea name="content" class="form-control" rows="4" required></textarea>
+                <textarea name="content" class="form-control" rows="4" placeholder="请输入通知内容" required></textarea>
             </div>
         </div>
     </form>
@@ -127,98 +270,214 @@
     var prefix = ctx + "system/message";
 
     $(function() {
+        // 初始化消息列表
         loadMessages();
+        // 初始化Select2多选下拉框
+        initUserSelect();
     });
 
-    // 1. 加载消息列表
+    /**
+     * 初始化用户选择下拉框
+     */
+    function initUserSelect() {
+        $('#userSelect').select2({
+            placeholder: "请选择要发送的成员",
+            allowClear: true,
+            language: "zh-CN",
+            width: "100%"
+        });
+    }
+
+    /**
+     * 加载消息列表
+     */
     function loadMessages() {
+        $("#msgList").html('<div class="empty-state"><i class="fa fa-spinner fa-spin fa-3x"></i><br>加载中...</div>');
+
         $.post(prefix + "/list", {}, function(res) {
-            var rows = res.rows;
+            var rows = res.rows || [];
             var html = '';
-            if (!rows || rows.length === 0) {
+
+            if (rows.length === 0) {
                 html = '<div class="empty-state"><i class="fa fa-envelope-o fa-3x"></i><br>暂无消息</div>';
             } else {
                 html = rows.map(function(item) {
                     var isRead = item.isRead === '1';
                     var readClass = isRead ? '' : 'unread';
                     var dot = isRead ? '' : '<span class="unread-dot"></span>';
+                    // 数字类型转中文显示
+                    var typeText = item.type == '1' ? '系统通知' : (item.type == '2' ? '团队公告' : '通知');
 
                     return `
                     <div class="msg-item ${readClass}" onclick="readMessage(${item.messageId}, this)">
                         <div class="msg-top">
                             <div class="msg-title">
-                                ${dot} <span class="type-badge system">${item.type || '通知'}</span> ${item.title}
+                                ${dot} <span class="type-badge system">${typeText}</span> ${item.title}
                             </div>
-                            <div class="msg-time">${item.createTime}</div>
+                            <div class="msg-time">${item.createTime || '-'}</div>
                         </div>
-                        <div class="msg-body">${item.content}</div>
+                        <div class="msg-body">${item.content || '无内容'}</div>
                     </div>
                     `;
                 }).join('');
             }
+
             $("#msgList").html(html);
+        }).fail(function() {
+            $("#msgList").html('<div class="empty-state"><i class="fa fa-exclamation-circle fa-3x"></i><br>加载失败，请刷新重试</div>');
         });
     }
 
-    // 2. 点击阅读
+    /**
+     * 标记单条消息已读
+     */
     function readMessage(id, el) {
-        // 视觉上立即变已读
+        // 视觉上立即标记已读
         $(el).removeClass('unread').find('.unread-dot').remove();
 
-        // 发送后端
-        $.post(prefix + "/read", { messageId: id });
+        // 异步通知后端
+        $.post(prefix + "/read", { messageId: id }, function(res) {
+            if (res.code !== 0) {
+                Swal.fire({ icon: 'warning', title: '提示', text: '标记已读失败', timer: 1500 });
+            }
+        });
 
-        // 弹窗显示详情
+        // 弹窗显示消息详情
         var content = $(el).find('.msg-body').text();
         var title = $(el).find('.msg-title').text().trim();
         Swal.fire({
             title: title,
             text: content,
             confirmButtonText: '关闭',
-            confirmButtonColor: '#0079bf'
+            confirmButtonColor: '#0079bf',
+            width: '500px'
         });
     }
 
-    // 3. 全部已读
+    /**
+     * 标记全部消息已读
+     */
     function markAllRead() {
-        $.post(prefix + "/readAll", function(res) {
-            if (res.code === 0) {
-                Swal.fire({ icon: 'success', title: '操作成功', toast: true, position: 'top-end', timer: 1500, showConfirmButton: false });
-                loadMessages();
-            }
-        });
-    }
-
-    // 4. 打开发布窗口
-    function openPublishModal() {
-        layer.open({
-            type: 1,
-            title: '发布新通知',
-            area: ['600px', '450px'],
-            content: $('#publishModal'),
-            btn: ['立即发送', '取消'],
-            yes: function(index, layero) {
-                $.ajax({
-                    url: prefix + "/publish",
-                    type: "post",
-                    data: $('#form-publish').serialize(),
-                    success: function(res) {
-                        if (res.code === 0) {
-                            layer.close(index);
-                            Swal.fire('发送成功', res.msg, 'success');
-                            loadMessages();
-                        } else {
-                            Swal.fire('发送失败', res.msg, 'error');
-                        }
+        Swal.fire({
+            title: '确认',
+            text: '是否标记所有消息为已读？',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: '确认',
+            cancelButtonText: '取消',
+            confirmButtonColor: '#0079bf'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.post(prefix + "/readAll", function(res) {
+                    if (res.code === 0) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '操作成功',
+                            toast: true,
+                            position: 'top-end',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                        loadMessages();
+                    } else {
+                        Swal.fire({ icon: 'error', title: '失败', text: res.msg });
                     }
                 });
             }
         });
     }
 
+    /**
+     * 打开发布通知弹窗
+     */
+    function openPublishModal() {
+        // 重置表单
+        $('#form-publish')[0].reset();
+        $('#userSelect').val(null).trigger('change');
+        $('#userSelectGroup').hide();
+
+        layer.open({
+            type: 1,
+            title: '发布新通知',
+            area: ['600px', '480px'],
+            content: $('#publishModal'),
+            btn: ['立即发送', '取消'],
+            shadeClose: false,
+            yes: function(index, layero) {
+                // 表单验证
+                var title = $('input[name="title"]').val().trim();
+                var content = $('textarea[name="content"]').val().trim();
+                var scope = $('select[name="scope"]').val();
+
+                if (!title) {
+                    Swal.fire({ icon: 'warning', title: '提示', text: '请输入通知标题' });
+                    return;
+                }
+
+                if (!content) {
+                    Swal.fire({ icon: 'warning', title: '提示', text: '请输入通知内容' });
+                    return;
+                }
+
+                if (scope === 'specified') {
+                    var selectedUsers = $('#userSelect').val() || [];
+                    if (selectedUsers.length === 0) {
+                        Swal.fire({ icon: 'warning', title: '提示', text: '请选择要发送的成员' });
+                        return;
+                    }
+                }
+
+                // 构造提交数据
+                var formData = $('#form-publish').serializeArray();
+                var receiveUserIds = $('#userSelect').val() || [];
+
+                // 移除原有的receiveUserIds参数，替换为多选值
+                formData = formData.filter(item => item.name !== 'receiveUserIds');
+                if (receiveUserIds.length > 0) {
+                    formData.push({name: 'receiveUserIds', value: receiveUserIds.join(',')});
+                }
+
+                // 提交请求
+                $.ajax({
+                    url: prefix + "/publish",
+                    type: "post",
+                    data: $.param(formData),
+                    dataType: "json",
+                    success: function(res) {
+                        if (res.code === 0) {
+                            layer.close(index);
+                            Swal.fire({
+                                icon: 'success',
+                                title: '发送成功',
+                                text: res.msg || '通知已成功发送',
+                                timer: 1500
+                            });
+                            loadMessages();
+                        } else {
+                            Swal.fire({ icon: 'error', title: '发送失败', text: res.msg || '发送出错，请重试' });
+                        }
+                    },
+                    error: function() {
+                        Swal.fire({ icon: 'error', title: '失败', text: '网络异常，请重试' });
+                    }
+                });
+            }
+        });
+
+        // 重新初始化下拉框（防止弹窗重复加载失效）
+        initUserSelect();
+    }
+
+    /**
+     * 切换接收范围显示/隐藏用户选择框
+     */
     function toggleUserSelect(val) {
-        if(val === 'specified') $('#userSelectGroup').show();
-        else $('#userSelectGroup').hide();
+        if (val === 'specified') {
+            $('#userSelectGroup').show();
+        } else {
+            $('#userSelectGroup').hide();
+            $('#userSelect').val(null).trigger('change');
+        }
     }
 </script>
 </body>
