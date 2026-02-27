@@ -127,7 +127,7 @@ public class KbCardController extends BaseController
     public String edit(@PathVariable("cardId") Long cardId, ModelMap mmap)
     {
         KbCard kbCard = kbCardService.selectKbCardByCardId(cardId);
-        mmap.put("kbCard", kbCard);
+        mmap.put("card", kbCard);
         return prefix + "/edit";
     }
 

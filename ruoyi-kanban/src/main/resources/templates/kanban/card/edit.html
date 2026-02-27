@@ -46,7 +46,8 @@
             <div style="flex: 2;">
                 <div class="field-group">
                     <div class="field-label">描述</div>
-                    <textarea name="description" class="modern-input" rows="8" th:field="*{description}" placeholder="添加更详细的描述..."></textarea>
+                    <!-- 核心修复：description改为cardContent，匹配实体类字段 -->
+                    <textarea name="cardContent" class="modern-input" rows="8" th:field="*{cardContent}" placeholder="添加更详细的描述..."></textarea>
                 </div>
             </div>
 
@@ -71,7 +72,8 @@
 
                 <div class="field-group">
                     <div class="field-label">截止日期</div>
-                    <input type="text" class="modern-input time-input" name="deadline" th:value="${#dates.format(card.deadline, 'yyyy-MM-dd')}" readonly style="cursor:pointer">
+                    <!-- 修复：增加空值判断，避免日期为null时报错 -->
+                    <input type="text" class="modern-input time-input" name="deadline" th:value="${card.deadline != null ? #dates.format(card.deadline, 'yyyy-MM-dd') : ''}" readonly style="cursor:pointer">
                 </div>
 
                 <div class="field-group">
@@ -80,7 +82,8 @@
                 </div>
 
                 <div class="field-group">
-                    <div class="field-label">进度: <span id="progVal" th:text="*{progress} + '%'"></span></div>
+                    <!-- 修复：进度为空时显示0% -->
+                    <div class="field-label">进度: <span id="progVal" th:text="*{progress} ?: 0 + '%'"></span></div>
                     <input type="range" name="progress" min="0" max="100" step="5" th:field="*{progress}" oninput="$('#progVal').text(this.value + '%')">
                 </div>
             </div>
