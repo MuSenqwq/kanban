@@ -235,6 +235,35 @@
     .stat-desc { font-size: 13px; color: #666; font-weight: 500; }
     .chart-container { display: flex; gap: 20px; height: 360px; }
     .chart-box { flex: 1; background: #fff; border-radius: 8px; padding: 15px; border: 1px solid #eee; }
+
+    /* ========== 强制覆盖Layer关闭按钮样式 ========== */
+    /* 彻底隐藏默认关闭按钮 */
+    .layui-layer-close1 {
+      display: none !important;
+    }
+    /* 自定义关闭按钮样式 */
+    .custom-close-btn {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      width: 24px;
+      height: 24px;
+      line-height: 24px;
+      text-align: center;
+      border-radius: 50%;
+      background: #f5f5f5;
+      color: #666;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 9999;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      text-decoration: none;
+    }
+    .custom-close-btn:hover {
+      background: #ff5252;
+      color: #fff;
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
 </head>
@@ -330,7 +359,9 @@
   </div>
 </div>
 
-<div id="statsModal" style="display:none; padding:25px;">
+<div id="statsModal" style="display:none; padding:25px; position:relative;">
+  <!-- 自定义关闭按钮 -->
+  <a href="javascript:;" class="custom-close-btn" id="statsModalClose">×</a>
   <div class="stat-cards">
     <div class="stat-item"><div class="stat-num" id="s-total">0</div><div class="stat-desc">总任务数</div></div>
     <div class="stat-item" style="background:#f0fff4; border-color:#e3fcef;"><div class="stat-num" id="s-done" style="color:#36b37e;">0</div><div class="stat-desc">已完成</div></div>
@@ -350,10 +381,19 @@
   var listPrefix = ctx + "kanban/list";
   var currentBoardId = [[${boardId}]];
   var autoRefreshTimer = null;
+  var currentLayerIndex = null; // 存储当前弹窗索引
 
   $(function() {
     initDrag();
     startAutoRefresh();
+
+    // 绑定自定义关闭按钮事件
+    $("#statsModalClose").click(function() {
+      if (currentLayerIndex) {
+        layer.close(currentLayerIndex);
+        currentLayerIndex = null;
+      }
+    });
   });
 
   window.refreshBoard = function() { window.location.reload(); }
@@ -446,17 +486,29 @@
   // 3. 统计面板 (ECharts + Layer)
   function openStats() {
     stopAutoRefresh();
-    layer.open({
+    currentLayerIndex = layer.open({
       type: 1,
       title: false,
-      closeBtn: 1,
+      closeBtn: 0, // 完全隐藏默认关闭按钮
       shadeClose: true,
-      skin: 'layui-layer-nobg', // 无背景，内容自适应圆角
+      skin: 'layui-layer-nobg',
       area: ['900px', '500px'],
       content: $('#statsModal').html(), // 复制内容防止ID冲突问题
       success: function(layero, index) {
         var $content = $(layero).find('.layui-layer-content');
-        $content.css({background: '#fff', borderRadius: '12px', padding: '25px', boxShadow: '0 10px 30px rgba(0,0,0,0.2)'});
+        $content.css({
+          background: '#fff',
+          borderRadius: '12px',
+          padding: '25px',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+          position: 'relative' // 确保自定义按钮定位正常
+        });
+
+        // 重新绑定自定义关闭按钮事件（因为content是复制的，需要重新绑定）
+        $content.find('.custom-close-btn').click(function() {
+          layer.close(index);
+          currentLayerIndex = null;
+        });
 
         var pieDom = $content.find('#pieChart')[0];
         var barDom = $content.find('#barChart')[0];
@@ -506,7 +558,10 @@
           });
         });
       },
-      end: function() { startAutoRefresh(); }
+      end: function() {
+        startAutoRefresh();
+        currentLayerIndex = null;
+      }
     });
   }
 
@@ -527,16 +582,40 @@
 
   // 5. 编辑卡片 (同上)
   function editCard(id) {
-    layer.open({
+    currentLayerIndex = layer.open({
       type: 2,
       title: false, // 隐藏标题栏，更像 Trello
-      closeBtn: 1,
+      closeBtn: 0, // 完全隐藏默认关闭按钮
       shadeClose: true,
       shade: 0.3,
       area: ['800px', '650px'],
       content: cardPrefix + "/edit/" + id,
       btn: [], // 禁用默认按钮
-      end: function() { refreshBoard(); }
+      success: function(layero, index) {
+        // 给编辑弹窗添加自定义关闭按钮
+        var $iframe = $(layero).find('iframe');
+        var iframeDoc = $iframe[0].contentDocument || $iframe[0].contentWindow.document;
+
+        // 如果iframe加载完成后添加
+        $iframe.on('load', function() {
+          // 创建自定义关闭按钮
+          var closeBtn = document.createElement('a');
+          closeBtn.href = 'javascript:;';
+          closeBtn.className = 'custom-close-btn';
+          closeBtn.innerHTML = '×';
+          closeBtn.onclick = function() {
+            layer.close(index);
+            currentLayerIndex = null;
+          };
+
+          // 添加到iframe的body中
+          iframeDoc.body.appendChild(closeBtn);
+        });
+      },
+      end: function() {
+        refreshBoard();
+        currentLayerIndex = null;
+      }
     });
   }
 

@@ -8,10 +8,10 @@
             border-radius: 6px;
             border-left: 4px solid #1c84c6; /* 默认蓝色左边框 */
             box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-            margin-bottom: 15px;
             padding: 15px;
             position: relative;
             transition: all 0.2s;
+            /* 移除margin-bottom，移到col容器上 */
         }
 
         .my-card:hover {
@@ -116,6 +116,44 @@
             width: 100%;
             margin: 10px 0;
         }
+
+        /* ========== 核心修复：解决排版混乱 ========== */
+        /* 给卡片列容器添加底部间距，避免卡片挤在一起 */
+        #myTaskContainer > [class*="col-"] {
+            margin-bottom: 20px;
+            /* 确保列容器内的padding不影响宽度计算 */
+            box-sizing: border-box;
+        }
+        /* 动画效果移到卡片本身，避免影响栅格列布局 */
+        .card-animate {
+            animation: fadeInUp 0.5s ease forwards;
+            opacity: 0;
+        }
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        /* 确保row容器正确包裹列，清除浮动 */
+        #myTaskContainer {
+            display: flex;
+            flex-wrap: wrap;
+            margin-right: -15px;
+            margin-left: -15px;
+        }
+        /* 响应式适配：小屏幕下卡片占满一行 */
+        @media (max-width: 767px) {
+            #myTaskContainer > [class*="col-"] {
+                width: 100%;
+                padding-right: 15px;
+                padding-left: 15px;
+            }
+        }
     </style>
 </head>
 <body class="gray-bg">
@@ -145,6 +183,7 @@
         </div>
     </div>
 
+    <!-- 任务列表容器：使用flex布局确保列排列规整 -->
     <div class="row" id="myTaskContainer">
     </div>
 
@@ -293,18 +332,18 @@
             var btns = "";
             if (!isDone) {
                 // 修改：点击打开弹窗，传递完整的card对象
-                btns = `
-    <button class="btn btn-white btn-xs btn-action" onclick="openProgressModal(${JSON.stringify(card).replace(/"/g, '&quot;')})">更新进度</button>
-    <button class="btn btn-primary btn-xs btn-action" onclick="finishTask(${card.cardId})"><i class="fa fa-check"></i> 完成</button>
-    `;
+                btns = '<button class="btn btn-white btn-xs btn-action" onclick="openProgressModal(' + JSON.stringify(card).replace(/"/g, '&quot;') + ')">更新进度</button>' +
+                    '<button class="btn btn-primary btn-xs btn-action" onclick="finishTask(' + card.cardId + ')"><i class="fa fa-check"></i> 完成</button>';
             } else {
-                btns = `<span class="label label-primary">已完成</span>`;
+                btns = '<span class="label label-primary">已完成</span>';
             }
 
-            // 修复模板字符串冲突，改用字符串拼接
+            // ========== 核心修复：调整卡片HTML结构 ==========
+            // 1. 动画类移到my-card上，避免影响栅格列
+            // 2. 确保col容器的padding/margin不影响布局
             html +=
-                '<div class="col-sm-6 col-md-4 animated fadeInUp">' +
-                '<div class="my-card ' + statusClass + '">' +
+                '<div class="col-sm-6 col-md-4">' +
+                '<div class="my-card ' + statusClass + ' card-animate">' +
                 '<div class="card-header-row">' +
                 '<div class="card-title">' + card.cardTitle + '</div>' +
                 '<div>' + priorityLabel + '</div>' +

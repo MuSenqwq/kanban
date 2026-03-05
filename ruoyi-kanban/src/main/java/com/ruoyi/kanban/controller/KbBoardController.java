@@ -91,10 +91,14 @@ public class KbBoardController extends BaseController
      * 修改任务看板
      */
     @GetMapping("/edit/{boardId}")
-    public String edit(@PathVariable("boardId") Long boardId, ModelMap mmap)
-    {
+    public String edit(@PathVariable("boardId") Long boardId, ModelMap mmap){
         KbBoard kbBoard = kbBoardService.selectKbBoardByBoardId(boardId);
+
+        KbBoardMember memberParam = new KbBoardMember();
+        memberParam.setBoardId(boardId);
+        List<KbBoardMember> kbMemberList = kbBoardMemberService.selectKbBoardMemberList(memberParam);
         mmap.put("board", kbBoard);
+        mmap.put("kbMemberList", kbMemberList);
         return prefix + "/edit";
     }
 
@@ -156,6 +160,14 @@ public class KbBoardController extends BaseController
         startPage();
         List<KbBoardMember> list = kbBoardMemberService.selectKbBoardMemberList(kbBoardMember);
         return getDataTable(list);
+    }
+    // 删除看板成员
+    @Log(title = "看板成员", businessType = BusinessType.DELETE)
+    @PostMapping("/removeMember")
+    @ResponseBody
+    public AjaxResult removeMember(Long id)
+    {
+        return toAjax(kbBoardMemberService.deleteKbBoardMemberById(id));
     }
 
 }
