@@ -4,6 +4,7 @@ import java.util.stream.Collectors;
 
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.kanban.domain.AssignUser;
+import com.ruoyi.kanban.domain.SysMessageVO;
 import com.ruoyi.kanban.service.IKbCardService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -148,5 +149,39 @@ public class SysUserMessageController extends BaseController
             sysUserMessageService.batchInsert(messageList);
         }
         return AjaxResult.success("通知发布成功！共发送" + messageList.size() + "条消息");
+    }
+    // 已发送消息查询
+    @PostMapping("/sentList")
+    @ResponseBody
+    public TableDataInfo sentList() {
+        startPage();
+
+        // 1. 查询所有消息
+        List<SysUserMessage> allMsg = sysUserMessageService.selectSysUserMessageList(new SysUserMessage());
+        // 2. 查询所有用户（用于匹配接收人名称）
+        List<AssignUser> allUsers = kbCardService.selectAllAssignUser();
+        List<SysMessageVO> sentList = new ArrayList<>();
+        for (SysUserMessage msg : allMsg) {
+            String receiveName = "未知用户";
+            for (AssignUser user : allUsers) {
+                if (user.getUserId().equals(msg.getUserId())) {
+                    receiveName = user.getUserName();
+                    break;
+                }
+            }
+            SysMessageVO vo = new SysMessageVO(
+                    msg.getMessageId(),
+                    msg.getTitle(),
+                    msg.getContent(),
+                    msg.getType(),
+                    msg.getCreateTime(),
+                    receiveName
+            );
+            sentList.add(vo);
+        }
+        TableDataInfo rspData = new TableDataInfo();
+        rspData.setRows(sentList);
+        rspData.setTotal(sentList.size());
+        return rspData;
     }
 }

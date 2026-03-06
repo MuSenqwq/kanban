@@ -167,6 +167,13 @@
             overflow: hidden;
         }
 
+        /* 已发送消息接收人样式 */
+        .msg-receiver {
+            font-size: 12px;
+            color: #0079bf;
+            margin-top: 8px;
+        }
+
         .empty-state {
             text-align: center;
             padding: 60px;
@@ -186,6 +193,10 @@
             background: #deebff;
             color: #0747a6;
         }
+        .type-badge.team {
+            background: #e3fcef;
+            color: #006644;
+        }
 
         /* Select2下拉框样式适配 */
         .select2-container { width: 100% !important; }
@@ -201,18 +212,20 @@
             <i class="fa fa-pencil"></i> 发布通知
         </div>
 
-        <div class="sidebar-btn active" onclick="loadMessages()">
+        <div class="sidebar-btn active" onclick="loadMessages('inbox')">
             <i class="fa fa-inbox"></i> 收件箱
         </div>
-        <div class="sidebar-btn" style="cursor: default; opacity: 0.6;">
-            <i class="fa fa-paper-plane"></i> 已发送 (开发中)
+        <div class="sidebar-btn" onclick="loadMessages('sent')" shiro:hasPermission="system:message:publish">
+            <i class="fa fa-paper-plane"></i> 已发送
         </div>
     </div>
 
     <div class="msg-content">
         <div class="msg-header">
-            <div class="header-title">消息列表</div>
-            <button class="btn btn-default btn-xs" onclick="markAllRead()"><i class="fa fa-check-circle-o"></i> 全部已读</button>
+            <div class="header-title" id="contentTitle">消息列表</div>
+            <div id="headerActions">
+                <button class="btn btn-default btn-xs" onclick="markAllRead()"><i class="fa fa-check-circle-o"></i> 全部已读</button>
+            </div>
         </div>
         <div class="msg-list-container" id="msgList">
         </div>
@@ -268,10 +281,11 @@
 <th:block th:include="include :: footer" />
 <script>
     var prefix = ctx + "system/message";
+    var currentTab = 'inbox'; // 默认选中收件箱
 
     $(function() {
-        // 初始化消息列表
-        loadMessages();
+        // 初始化消息列表（默认收件箱）
+        loadMessages('inbox');
         // 初始化Select2多选下拉框
         initUserSelect();
     });
@@ -290,46 +304,110 @@
 
     /**
      * 加载消息列表
+     * @param type 类型：inbox(收件箱) / sent(已发送)
      */
-    function loadMessages() {
+    function loadMessages(type) {
+        // 更新当前选中标签
+        currentTab = type || 'inbox';
+        $('.sidebar-btn').removeClass('active');
+        $('.sidebar-btn').each(function() {
+            if((currentTab === 'inbox' && $(this).find('i').hasClass('fa-inbox')) ||
+                (currentTab === 'sent' && $(this).find('i').hasClass('fa-paper-plane'))) {
+                $(this).addClass('active');
+            }
+        });
+
+        // 更新标题和操作按钮
+        if(currentTab === 'inbox') {
+            $('#contentTitle').text('消息列表');
+            $('#headerActions').html('<button class="btn btn-default btn-xs" onclick="markAllRead()"><i class="fa fa-check-circle-o"></i> 全部已读</button>');
+        } else {
+            $('#contentTitle').text('已发送消息');
+            $('#headerActions').html(''); // 已发送列表隐藏全部已读按钮
+        }
+
+        // 显示加载状态
         $("#msgList").html('<div class="empty-state"><i class="fa fa-spinner fa-spin fa-3x"></i><br>加载中...</div>');
 
-        $.post(prefix + "/list", {}, function(res) {
+        // 根据类型选择不同接口和参数
+        var url = currentTab === 'inbox' ? prefix + "/list" : prefix + "/sentList";
+        // 已发送接口添加参数：不分页
+        var params = currentTab === 'sent' ? {不分页: true} : {};
+
+        $.post(url, params, function(res) {
             var rows = res.rows || [];
             var html = '';
 
             if (rows.length === 0) {
-                html = '<div class="empty-state"><i class="fa fa-envelope-o fa-3x"></i><br>暂无消息</div>';
+                var emptyText = currentTab === 'inbox' ? '暂无消息' : '暂无已发送消息';
+                html = '<div class="empty-state"><i class="fa fa-envelope-o fa-3x"></i><br>' + emptyText + '</div>';
             } else {
                 html = rows.map(function(item) {
-                    var isRead = item.isRead === '1';
-                    var readClass = isRead ? '' : 'unread';
-                    var dot = isRead ? '' : '<span class="unread-dot"></span>';
-                    // 数字类型转中文显示
-                    var typeText = item.type == '1' ? '系统通知' : (item.type == '2' ? '团队公告' : '通知');
+                    // 收件箱和已发送的不同渲染逻辑
+                    if(currentTab === 'inbox') {
+                        var isRead = item.isRead === '1';
+                        var readClass = isRead ? '' : 'unread';
+                        var dot = isRead ? '' : '<span class="unread-dot"></span>';
+                        // 数字类型转中文显示
+                        var typeText = item.type == '1' ? '系统通知' : (item.type == '2' ? '团队公告' : '通知');
+                        var badgeClass = item.type == '1' ? 'system' : 'team';
 
-                    return `
-                    <div class="msg-item ${readClass}" onclick="readMessage(${item.messageId}, this)">
-                        <div class="msg-top">
-                            <div class="msg-title">
-                                ${dot} <span class="type-badge system">${typeText}</span> ${item.title}
+                        return `
+                        <div class="msg-item ${readClass}" onclick="readMessage(${item.messageId}, this)">
+                            <div class="msg-top">
+                                <div class="msg-title">
+                                    ${dot} <span class="type-badge ${badgeClass}">${typeText}</span> ${item.title}
+                                </div>
+                                <div class="msg-time">${formatDate(item.createTime) || '-'}</div>
                             </div>
-                            <div class="msg-time">${item.createTime || '-'}</div>
+                            <div class="msg-body">${item.content || '无内容'}</div>
                         </div>
-                        <div class="msg-body">${item.content || '无内容'}</div>
-                    </div>
-                    `;
+                        `;
+                    } else {
+                        // 已发送消息渲染逻辑（适配SysMessageVO）
+                        var typeText = item.type == '1' ? '系统通知' : (item.type == '2' ? '团队公告' : '通知');
+                        var badgeClass = item.type == '1' ? 'system' : 'team';
+
+                        return `
+                        <div class="msg-item" onclick="viewSentMessage(${item.messageId}, this)">
+                            <div class="msg-top">
+                                <div class="msg-title">
+                                    <span class="type-badge ${badgeClass}">${typeText}</span> ${item.title}
+                                </div>
+                                <div class="msg-time">${formatDate(item.createTime) || '-'}</div>
+                            </div>
+                            <div class="msg-body">${item.content || '无内容'}</div>
+                            <div class="msg-receiver">接收人：${item.receiveUserName || '未知用户'}</div>
+                        </div>
+                        `;
+                    }
                 }).join('');
             }
 
             $("#msgList").html(html);
         }).fail(function() {
-            $("#msgList").html('<div class="empty-state"><i class="fa fa-exclamation-circle fa-3x"></i><br>加载失败，请刷新重试</div>');
+            var errorText = currentTab === 'inbox' ? '加载失败，请刷新重试' : '已发送消息加载失败，请刷新重试';
+            $("#msgList").html('<div class="empty-state"><i class="fa fa-exclamation-circle fa-3x"></i><br>' + errorText + '</div>');
         });
     }
 
     /**
-     * 标记单条消息已读
+     * 日期格式化工具函数
+     */
+    function formatDate(dateStr) {
+        if (!dateStr) return '';
+        var date = new Date(dateStr);
+        return date.toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        }).replace(/\//g, '-');
+    }
+
+    /**
+     * 标记单条消息已读（仅收件箱）
      */
     function readMessage(id, el) {
         // 视觉上立即标记已读
@@ -355,7 +433,34 @@
     }
 
     /**
-     * 标记全部消息已读
+     * 查看已发送消息详情
+     */
+    function viewSentMessage(id, el) {
+        var content = $(el).find('.msg-body').text();
+        var title = $(el).find('.msg-title').text().trim();
+        var receiver = $(el).find('.msg-receiver').text();
+        var time = $(el).find('.msg-time').text();
+
+        var detailHtml = `
+            <div style="text-align:left; line-height:1.8;">
+                <p><strong>发送时间：</strong>${time}</p>
+                <p><strong>${receiver}</strong></p>
+                <hr style="margin:10px 0;">
+                <p>${content}</p>
+            </div>
+        `;
+
+        Swal.fire({
+            title: title,
+            html: detailHtml,
+            confirmButtonText: '关闭',
+            confirmButtonColor: '#0079bf',
+            width: '500px'
+        });
+    }
+
+    /**
+     * 标记全部消息已读（仅收件箱）
      */
     function markAllRead() {
         Swal.fire({
@@ -378,7 +483,7 @@
                             timer: 1500,
                             showConfirmButton: false
                         });
-                        loadMessages();
+                        loadMessages('inbox');
                     } else {
                         Swal.fire({ icon: 'error', title: '失败', text: res.msg });
                     }
@@ -452,7 +557,12 @@
                                 text: res.msg || '通知已成功发送',
                                 timer: 1500
                             });
-                            loadMessages();
+                            // 发送成功后刷新对应列表
+                            if(currentTab === 'sent') {
+                                loadMessages('sent');
+                            } else {
+                                loadMessages('inbox');
+                            }
                         } else {
                             Swal.fire({ icon: 'error', title: '发送失败', text: res.msg || '发送出错，请重试' });
                         }
